@@ -2,6 +2,7 @@
 Main CLI Entrypoint for MedClient Python Sidecar.
 Parses --port, reads ephemeral IPC token from stdin, and starts Uvicorn.
 """
+import io
 import os
 import sys
 import argparse
@@ -31,17 +32,19 @@ def parse_arguments() -> argparse.Namespace:
 
 def read_stdin_ipc_token() -> str:
     """
-    Read ephemeral IPC secret token from line 1 of stdin piped by Rust host.
-    Falls back to MEDCLIENT_IPC_TOKEN environment variable if stdin is a tty.
+    Read ephemeral IPC secret token from environment variable or line 1 of stdin piped by Rust host.
     """
-    ipc_token = ""
-    if not sys.stdin.isatty():
-        first_line = sys.stdin.readline()
-        if first_line:
-            ipc_token = first_line.strip()
+    ipc_token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
+    if ipc_token:
+        return ipc_token
 
-    if not ipc_token:
-        ipc_token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
+    if not sys.stdin.isatty():
+        try:
+            first_line = sys.stdin.readline()
+            if first_line:
+                ipc_token = first_line.strip()
+        except (io.UnsupportedOperation, OSError):
+            pass
 
     return ipc_token
 
