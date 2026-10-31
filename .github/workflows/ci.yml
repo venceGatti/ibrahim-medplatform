@@ -25,14 +25,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r medclient/sidecar-python/requirements.txt
           pip install pytest pytest-asyncio polars pycryptodome httpx fastapi uvicorn
+          pip install -r medfactory/requirements.txt
 
       - name: Run MedFactory Tests
         run: |
-          pytest medfactory/tests -v
+          PYTHONPATH=. python -m pytest medfactory/tests -v
 
       - name: Run Python Sidecar Tests
         run: |
-          pytest medclient/sidecar-python/tests -v
+          PYTHONPATH=. python -m pytest medclient/sidecar-python/tests -v
 
   rust-test:
     name: Rust Core Verification
