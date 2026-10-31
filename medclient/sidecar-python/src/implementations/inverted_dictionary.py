@@ -109,3 +109,17 @@ class InvertedLexicalDictionary(IInvertedLexicalDictionary):
                     return self._synonym_map[subphrase]
 
         return None
+
+    def lookup_phrase(self, phrase: str) -> List[tuple[str, float]]:
+        """Look up matching concepts returning a ranked list of (target_code, match_score)."""
+        resolved = self.resolve_colloquial(phrase)
+        if resolved:
+            return [(str(resolved["target_code"]), 1.0)]
+        normalized = self._normalize(phrase)
+        matches: List[tuple[str, float]] = []
+        for term, data in self._synonym_map.items():
+            if normalized in term or term in normalized:
+                matches.append((str(data["target_code"]), 0.85))
+        return matches
+
+        return None
