@@ -33,19 +33,24 @@ def read_stdin_ipc_token() -> str:
     """
     Read ephemeral IPC secret token from environment variable or line 1 of stdin.
     """
-    token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
-    if token:
-        return token
+    ipc_token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
+    if ipc_token:
+        return ipc_token
 
     if not sys.stdin.isatty():
         try:
             first_line = sys.stdin.readline()
             if first_line:
-                return first_line.strip()
-        except Exception:
-            pass
+                ipc_token = first_line.strip()
+        except Exception as stdin_read_error:
+            sys.stderr.write(f"[MainCLI] Stdin read exception: {stdin_read_error}\n")
 
-    return ""
+    if not ipc_token:
+        raise ValueError(
+            "IPC Secret Token missing. Sidecar must receive ephemeral token on stdin or via MEDCLIENT_IPC_TOKEN."
+        )
+
+    return ipc_token
 
 
 def main() -> None:

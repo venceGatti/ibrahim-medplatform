@@ -56,15 +56,6 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
     }
   }, [questionId, examAnswers]);
 
-  const hotspotTargetPolygons: readonly (readonly NormalizedVertex2D[])[] =
-    questionSpec.target_polygons ?? [
-      [
-        [0.2, 0.2],
-        [0.6, 0.2],
-        [0.4, 0.6],
-      ],
-    ];
-
   const handleHotspotCanvasClick = (mouseEv: React.MouseEvent<HTMLDivElement>): void => {
     const rect = mouseEv.currentTarget.getBoundingClientRect();
     const effectiveRect =
@@ -81,9 +72,14 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
     const clampedV = Math.max(0.0, Math.min(1.0, rawV));
     setLastClickCoords([clampedU, clampedV]);
 
-    const hitAny = hotspotTargetPolygons.some((poly) =>
-      evaluateHotspotHitWithTolerance(clampedU, clampedV, poly)
-    );
+    const polygons = questionSpec.target_polygons ?? [
+      [
+        [0.2, 0.2],
+        [0.6, 0.2],
+        [0.4, 0.6],
+      ],
+    ];
+    const hitAny = polygons.some((poly) => evaluateHotspotHitWithTolerance(clampedU, clampedV, poly));
     setHotspotHitStatus(hitAny ? 'HIT' : 'MISS');
     recordExamAnswer(questionId, hitAny ? 'HOTSPOT_HIT' : 'HOTSPOT_MISS');
   };
@@ -224,26 +220,26 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
               Clicca sulla lesione anatomica ({questionSpec.image_uri ?? 'med-asset://images/cxr.webp'})
             </span>
 
-              {/* Visual Hotspot Feedback Overlay in [0,1]^2 Coordinate Space */}
-              <svg
-                className="pointer-events-none absolute inset-0 h-full w-full"
-                viewBox="0 0 1000 1000"
-                preserveAspectRatio="none"
-                data-testid="hotspot-feedback-overlay"
-              >
-                {hotspotTargetPolygons.map((polygonVertices, polyIdx) => (
-                  <polygon
-                    key={`target-poly-${polyIdx}`}
-                    points={polygonVertices
-                      .map(([vx, vy]) => `${Math.round(vx * 1000)},${Math.round(vy * 1000)}`)
-                      .join(' ')}
-                    fill="rgba(59, 130, 246, 0.08)"
-                    stroke="#3b82f6"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
-                    opacity={0.7}
-                  />
-                ))}
+            {/* Visual Hotspot Feedback Overlay in [0,1]^2 Coordinate Space */}
+            <svg
+              className="pointer-events-none absolute inset-0 h-full w-full"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+              data-testid="hotspot-feedback-overlay"
+            >
+              {(questionSpec.target_polygons ?? []).map((polygonVertices, polyIdx) => (
+                <polygon
+                  key={`target-poly-${polyIdx}`}
+                  points={polygonVertices
+                    .map(([vx, vy]) => `${Math.round(vx * 1000)},${Math.round(vy * 1000)}`)
+                    .join(' ')}
+                  fill="rgba(59, 130, 246, 0.08)"
+                  stroke="#3b82f6"
+                  strokeWidth="1.5"
+                  strokeDasharray="4 4"
+                  opacity={0.7}
+                />
+              ))}
 
               {lastClickCoords && hotspotHitStatus !== 'IDLE' && (
                 <g
@@ -329,28 +325,9 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
             Verifica Entailment NLI
           </button>
           {nliPassed !== null && (
-            <div
-              className={`rounded-md border p-3 text-xs font-semibold ${
-                nliPassed
-                  ? 'border-emerald-500/60 bg-emerald-950/80 text-emerald-200'
-                  : 'border-rose-500/60 bg-rose-950/80 text-rose-200'
-              }`}
-              data-testid="nli-evaluation-outcome"
-            >
-              <div className="flex items-center justify-between">
-                <span>
-                  Esito NLI: {nliPassed ? '✓ ENTAILMENT CONFERMATO (≥ 0.75)' : '✕ CONTRADDIZIONE / INCOMPLETO'}
-                </span>
-                <span className="font-mono text-[11px] uppercase tracking-wide">
-                  {nliPassed ? 'Ipotesi Conforme alle Linee Guida' : 'Revisione Clinica Richiesta'}
-                </span>
-              </div>
-              <p className="mt-1 text-[11px] font-normal text-slate-300">
-                {nliPassed
-                  ? 'La formulazione proposta copre gli elementi terapeutici essenziali descritti nella monografia.'
-                  : 'Specificare principi attivi di prima linea (es. Pantoprazolo, Noradrenalina o Cristalloidi).'}
-              </p>
-            </div>
+            <p className="text-xs font-bold text-emerald-300" data-testid="nli-evaluation-outcome">
+              Esito NLI: {nliPassed ? 'ENTAILMENT CONFERMATO (>= 0.75)' : 'CONTRADDIZIONE / INCOMPLETO'}
+            </p>
           )}
         </div>
       )}

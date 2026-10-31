@@ -176,3 +176,55 @@ export interface SDUIPayloadEnvelope {
   readonly system_alert_level: 'NOMINAL' | 'YELLOW_ATTENTION' | 'RED_CRITICAL';
   readonly blocks: readonly SDUIAnyBlock[];
 }
+
+export interface SearchMatchEntry {
+  readonly concept_id: string;
+  readonly title: string;
+  readonly match_score: number;
+  readonly source: string;
+}
+
+export interface HybridSearchResponse {
+  readonly query: string;
+  readonly matches: readonly SearchMatchEntry[];
+}
+
+export interface FSRSReviewOutput {
+  readonly stability: number;
+  readonly difficulty: number;
+  readonly scheduled_days: number;
+  readonly due_timestamp_utc: string;
+  readonly reps: number;
+  readonly lapses: number;
+}
+
+export interface SymptomMatcherOutput {
+  readonly session_id: string;
+  readonly execution_time_ms: number;
+  readonly red_flags: Readonly<Record<string, unknown>>;
+  readonly differential_diagnosis: readonly DifferentialCandidate[];
+  readonly nbq?: NextBestQuestionSpec | null;
+}
+
+export interface AgentHealthResponse {
+  readonly status: string;
+  readonly rss_mb: number;
+  readonly db_active: string;
+  readonly uptime_seconds: number;
+}
+
+export interface AgentStateResponse {
+  readonly active_slot: string;
+  readonly active_db_path: string;
+  readonly pool_stats: Readonly<Record<string, unknown>>;
+  readonly session_count: number;
+  readonly system_alert_level: string;
+}
+
+export interface AgentExecuteResponse {
+  readonly action_type: string;
+  readonly success: boolean;
+  readonly execution_time_ms: number;
+  readonly result_payload: Readonly<Record<string, unknown>>;
+  readonly error_message?: string;
+}

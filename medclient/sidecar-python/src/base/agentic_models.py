@@ -1,6 +1,6 @@
 """Pydantic V2 models for Agentic API endpoints."""
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, ConfigDict, model_validator, computed_field
+from pydantic import BaseModel, Field, ConfigDict, AliasChoices
 
 
 class AgentHealthResponse(BaseModel):
@@ -31,34 +31,23 @@ class AgentExecuteRequest(BaseModel):
     action_type: str = Field(description="Action name, e.g. 'EVALUATE_DIAGNOSTIC'")
     action_parameters: Dict[str, Any] = Field(
         default_factory=dict,
+        validation_alias=AliasChoices("action_parameters", "payload"),
+        serialization_alias="action_parameters",
         description="Typed parameters for the action",
     )
-
-    @model_validator(mode="before")
-    @classmethod
-    def populate_action_parameters(cls, input_data: Any) -> Any:
-        if isinstance(input_data, dict):
-            if "payload" in input_data and "action_parameters" not in input_data:
-                normalized = dict(input_data)
-                normalized["action_parameters"] = normalized.pop("payload")
-                return normalized
-        return input_data
 
 
 class AgentExecuteResponse(BaseModel):
     """Action execution outcome envelope."""
-    model_config = ConfigDict(frozen=False, populate_by_name=True)
+    model_config = ConfigDict(frozen=True, populate_by_name=True)
 
     success: bool
     action_type: str
     execution_outcome: Dict[str, Any] = Field(
         default_factory=dict,
+        validation_alias=AliasChoices("execution_outcome", "result"),
+        serialization_alias="execution_outcome",
         description="Execution outcome dictionary",
     )
     error_message: Optional[str] = None
 
-    @computed_field
-    @property
-    def result(self) -> Dict[str, Any]:
-        """Backward compatibility alias for execution outcome payload."""
-        return self.execution_outcome

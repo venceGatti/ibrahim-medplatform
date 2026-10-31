@@ -9,6 +9,7 @@ from ..base.diagnostic_models import (
     SymptomMatcherInput,
     SymptomMatcherOutput,
     DifferentialCandidate,
+    NextBestQuestion,
 )
 from ..base.pharmacology_models import (
     PrescribedDrugItem,
@@ -31,6 +32,8 @@ from ..implementations.ckd_epi import CKDEPI2021Calculator
 from ..implementations.cpic_engine import CPICPharmacogenomicsEngine
 from ..implementations.fsrs_scheduler import FSRSScheduler
 from ..implementations.hotspot_evaluator import HotspotEvaluator
+from ..implementations.softmax_normalizer import LogSumExpNormalizer
+from ..implementations.active_discriminator import ActiveDiscriminator
 
 
 import hmac
@@ -244,21 +247,47 @@ def evaluate_symptom_matcher(symptom_matcher_request: SymptomMatcherInput, reque
 
     ranker = getattr(request.app.state, "csr_ranker", None)
     candidates: List[DifferentialCandidate] = []
+    nbq_result: Optional[NextBestQuestion] = None
 
     if ranker:
         pathognomonic_flags = {f.hpo_id: f.is_pathognomonic for f in symptom_matcher_request.findings}
         scored_diseases = ranker.score_diseases(positive_findings, negative_findings, {}, pathognomonic_flags)
-        for icd_code, log_odds, support_symptoms, rule_out_penalties in scored_diseases[:5]:
-            candidates.append(
-                DifferentialCandidate(
-                    icd10_code=icd_code,
-                    disease_name=ranker.disease_names.get(icd_code, icd_code),
-                    posterior_probability=0.5,
-                    raw_log_odds=round(log_odds, 3),
-                    supporting_symptoms=support_symptoms,
-                    rule_out_penalties=rule_out_penalties,
+        top_slice = scored_diseases[:5]
+        if top_slice:
+            normalizer = LogSumExpNormalizer()
+            logits = [candidate_item[1] for candidate_item in top_slice]
+            posterior_probabilities = normalizer.normalize_logits(logits)
+
+            for idx, (icd_code, log_odds, support_symptoms, rule_out_penalties) in enumerate(top_slice):
+                candidates.append(
+                    DifferentialCandidate(
+                        icd10_code=icd_code,
+                        disease_name=ranker.disease_names.get(icd_code, icd_code),
+                        posterior_probability=round(float(posterior_probabilities[idx]), 4),
+                        raw_log_odds=round(log_odds, 3),
+                        supporting_symptoms=support_symptoms,
+                        rule_out_penalties=rule_out_penalties,
+                    )
                 )
-            )
+
+            if len(candidates) >= 2:
+                investigated_findings = set(positive_findings) | set(negative_findings)
+                uninvestigated_features = [
+                    feature_code for feature_code in ranker.idx_to_feature.values()
+                    if feature_code not in investigated_findings
+                ]
+                if uninvestigated_features:
+                    active_discriminator = ActiveDiscriminator()
+                    selected_nbq = active_discriminator.select_next_best_question(
+                        candidate_a=candidates[0].disease_name,
+                        prob_a=candidates[0].posterior_probability,
+                        candidate_b=candidates[1].disease_name,
+                        prob_b=candidates[1].posterior_probability,
+                        uninvestigated_features=uninvestigated_features[:50],
+                        feature_costs={f: 1.0 for f in uninvestigated_features[:50]},
+                    )
+                    if selected_nbq:
+                        nbq_result = NextBestQuestion(**selected_nbq)
 
     execution_time_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
     return SymptomMatcherOutput(
@@ -266,7 +295,7 @@ def evaluate_symptom_matcher(symptom_matcher_request: SymptomMatcherInput, reque
         execution_time_ms=execution_time_ms,
         red_flags=red_flags_dict,
         differential_diagnosis=candidates,
-        nbq=None,
+        nbq=nbq_result,
     )
 
 

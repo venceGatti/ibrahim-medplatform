@@ -140,8 +140,55 @@ export class SidecarIpcClient implements IIpcSidecarClient {
     throw lastCaughtError;
   }
 
+  public async request<T>(
+    endpointPath: string,
+    method: 'GET' | 'POST',
+    jsonBody?: string
+  ): Promise<T> {
+    return this.requestWithBackoff<T>(endpointPath, method, jsonBody);
+  }
+
   public async checkHealth(): Promise<SidecarHealthReport> {
     return this.requestWithBackoff<SidecarHealthReport>('/agent/health', 'GET');
+  }
+
+  public async getClinicalSheet<T>(sheetId: string): Promise<T> {
+    return this.requestWithBackoff<T>(`/api/v3/sheets/${encodeURIComponent(sheetId)}`, 'GET');
+  }
+
+  public async evaluateDiagnostic<T>(payload: unknown): Promise<T> {
+    return this.requestWithBackoff<T>('/api/v3/engine/evaluate', 'POST', JSON.stringify(payload));
+  }
+
+  public async evaluatePharmacology<T>(
+    payload: unknown,
+    queryParams?: Readonly<Record<string, string | number | boolean>>
+  ): Promise<T> {
+    let targetEndpoint = '/api/v3/pharma/evaluate';
+    if (queryParams) {
+      const searchParams = new URLSearchParams();
+      for (const [paramKey, paramValue] of Object.entries(queryParams)) {
+        searchParams.append(paramKey, String(paramValue));
+      }
+      targetEndpoint += `?${searchParams.toString()}`;
+    }
+    return this.requestWithBackoff<T>(targetEndpoint, 'POST', JSON.stringify(payload));
+  }
+
+  public async evaluateExam<T>(payload: unknown): Promise<T> {
+    return this.requestWithBackoff<T>('/api/v3/exam/evaluate', 'POST', JSON.stringify(payload));
+  }
+
+  public async searchHybrid<T>(queryText: string, limit = 10): Promise<T> {
+    return this.requestWithBackoff<T>(
+      '/api/v3/search/hybrid',
+      'POST',
+      JSON.stringify({ query_text: queryText, limit })
+    );
+  }
+
+  public async scheduleFsrs<T>(payload: unknown): Promise<T> {
+    return this.requestWithBackoff<T>('/api/v3/fsrs/schedule', 'POST', JSON.stringify(payload));
   }
 
   public async executeAction(
@@ -158,4 +205,33 @@ export class SidecarIpcClient implements IIpcSidecarClient {
       serializedBody
     );
   }
+}
+
+export function resolveSidecarIpcConfig(): SidecarClientConfig {
+  let sidecarPort = 8765;
+  let secretToken = 'medclient_local_session_secure_token';
+
+  if (typeof window !== 'undefined') {
+    const windowObj = window as unknown as Record<string, unknown>;
+    if (typeof windowObj.__MEDCLIENT_SIDECAR_PORT__ === 'number') {
+      sidecarPort = windowObj.__MEDCLIENT_SIDECAR_PORT__;
+    }
+    if (
+      typeof windowObj.__TAURI_IPC_SECRET__ === 'string' &&
+      windowObj.__TAURI_IPC_SECRET__.trim().length > 0
+    ) {
+      secretToken = windowObj.__TAURI_IPC_SECRET__;
+    } else if (
+      typeof windowObj.__MEDCLIENT_IPC_TOKEN__ === 'string' &&
+      windowObj.__MEDCLIENT_IPC_TOKEN__.trim().length > 0
+    ) {
+      secretToken = windowObj.__MEDCLIENT_IPC_TOKEN__;
+    }
+  }
+
+  return {
+    port: sidecarPort,
+    ipcSecretToken: secretToken,
+    hostAddress: '127.0.0.1',
+  };
 }
