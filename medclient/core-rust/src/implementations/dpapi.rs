@@ -14,7 +14,7 @@ impl WindowsDpapiVault {
         Self
     }
 
-    pub fn encrypt(&self, plaintext_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn encrypt(&self, _plaintext_bytes: &[u8]) -> Result<Vec<u8>, String> {
         #[cfg(windows)]
         unsafe {
             if plaintext_bytes.is_empty() {
@@ -57,7 +57,7 @@ impl WindowsDpapiVault {
         }
     }
 
-    pub fn decrypt(&self, ciphertext_bytes: &[u8]) -> Result<Vec<u8>, String> {
+    pub fn decrypt(&self, _ciphertext_bytes: &[u8]) -> Result<Vec<u8>, String> {
         #[cfg(windows)]
         unsafe {
             if ciphertext_bytes.is_empty() {

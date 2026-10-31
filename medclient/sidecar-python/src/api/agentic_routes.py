@@ -62,7 +62,7 @@ def verify_ipc_token(request: Request, x_tauri_ipc_secret: Optional[str] = Heade
     """Verify ephemeral IPC secret passed via header strictly and unconditionally (ROA-23)."""
     expected_token = getattr(request.app.state, "ipc_token", None) or os.environ.get("MEDCLIENT_IPC_TOKEN")
     if expected_token:
-        if not x_tauri_ipc_secret or not hmac.compare_digest(str(x_tauri_ipc_secret), str(expected_token)):
+        if not x_tauri_ipc_secret or not hmac.compare_digest(x_tauri_ipc_secret.encode('utf-8'), expected_token.encode('utf-8')):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing X-Tauri-IPC-Secret token",

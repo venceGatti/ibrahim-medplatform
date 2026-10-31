@@ -7,14 +7,18 @@ use crate::implementations::jemalloc_tuner::{JemallocMemoryTuner, MemoryTunerCon
 use crate::implementations::sidecar::{allocate_ephemeral_port_and_token, spawn_sidecar_process};
 use crate::implementations::supervisor::Win32JobSupervisor;
 use crate::implementations::throttling::SystemResourceSupervisor;
-use crate::interfaces::traits::{IDpapiVault, IHostLifecycle, IJobSupervisor};
+use crate::interfaces::traits::{IHostLifecycle, IJobSupervisor};
+#[cfg(windows)]
+use crate::interfaces::traits::IDpapiVault;
 
 pub struct HostProcessLifecycle {
     phase: HostLifecyclePhase,
     job_supervisor: Option<Win32JobSupervisor>,
     resource_supervisor: SystemResourceSupervisor,
     memory_tuner: JemallocMemoryTuner,
+    #[allow(dead_code)]
     dpapi_vault: WindowsDpapiVault,
+    #[allow(dead_code)]
     protected_token_blob: Option<Vec<u8>>,
     sidecar_process: Option<Child>,
     handshake_config: Option<SidecarHandshakeConfig>,
