@@ -11,18 +11,107 @@ export interface ClinicalSheetBlockViewProps {
 
 export function resolveCalloutThemeClasses(severity: CalloutSeverity): string {
   if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
-    return 'border-red-600 bg-red-50 text-red-950';
+    return 'border-rose-600 bg-rose-600/10 text-rose-100';
   }
   if (severity === 'BLACKBOX') {
-    return 'border-slate-950 bg-red-950 text-red-100 ring-2 ring-red-500';
+    return 'border-amber-500/20 bg-amber-950/40 text-amber-200 ring-1 ring-amber-500/20';
   }
   if (severity === 'WARNING') {
-    return 'border-amber-500 bg-amber-50 text-amber-950';
+    return 'border-amber-500 bg-amber-500/10 text-amber-200';
   }
   if (severity === 'CLINICAL_PEARL') {
-    return 'border-emerald-500 bg-emerald-50 text-emerald-950';
+    return 'border-sky-600 bg-sky-600/10 text-sky-100';
   }
-  return 'border-blue-500 bg-blue-50 text-blue-950';
+  return 'border-blue-500 bg-blue-500/10 text-blue-100';
+}
+
+export function resolveCalloutBadgeClasses(severity: CalloutSeverity): string {
+  if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
+    return 'bg-rose-600 text-white';
+  }
+  if (severity === 'BLACKBOX') {
+    return 'bg-amber-500 text-slate-950 font-black';
+  }
+  if (severity === 'CLINICAL_PEARL') {
+    return 'bg-sky-600 text-white';
+  }
+  if (severity === 'WARNING') {
+    return 'bg-amber-500 text-slate-950 font-bold';
+  }
+  return 'bg-blue-600 text-white';
+}
+
+function renderCalloutIcon(severity: CalloutSeverity): React.ReactNode {
+  if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
+    return (
+      <svg
+        className="h-5 w-5 shrink-0 text-rose-500"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth="2"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"
+        />
+      </svg>
+    );
+  }
+  if (severity === 'BLACKBOX') {
+    return (
+      <svg
+        className="h-5 w-5 shrink-0 text-amber-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth="2"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+        />
+      </svg>
+    );
+  }
+  if (severity === 'CLINICAL_PEARL') {
+    return (
+      <svg
+        className="h-5 w-5 shrink-0 text-sky-400"
+        fill="none"
+        viewBox="0 0 24 24"
+        strokeWidth="2"
+        stroke="currentColor"
+        aria-hidden="true"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.516 0c.85.493 1.508 1.333 1.508 2.316V18"
+        />
+      </svg>
+    );
+  }
+  return (
+    <svg
+      className="h-5 w-5 shrink-0 text-blue-400"
+      fill="none"
+      viewBox="0 0 24 24"
+      strokeWidth="2"
+      stroke="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"
+      />
+    </svg>
+  );
 }
 
 export const ClinicalSheetBlockView: React.FC<ClinicalSheetBlockViewProps> = ({
@@ -53,19 +142,29 @@ export const ClinicalSheetBlockView: React.FC<ClinicalSheetBlockViewProps> = ({
       </header>
 
       {block.callouts.length > 0 && (
-        <div className="space-y-2" data-testid="clinical-sheet-callouts">
+        <div className="space-y-3" data-testid="clinical-sheet-callouts">
           {block.callouts.map((calloutEntry, idx) => (
             <div
               key={`callout-${block.sheet_id}-${idx}`}
-              className={`rounded-md border-l-4 p-3 text-sm font-medium ${resolveCalloutThemeClasses(
+              className={`rounded-lg border-l-4 p-4 text-sm font-medium shadow-sm ${resolveCalloutThemeClasses(
                 calloutEntry.severity
               )}`}
               data-testid={`callout-${calloutEntry.severity}`}
             >
-              <div className="font-bold uppercase tracking-wide">
-                [{calloutEntry.severity}] {calloutEntry.title ?? ''}
+              <div className="flex items-center gap-2">
+                {renderCalloutIcon(calloutEntry.severity)}
+                <span
+                  className={`rounded px-2 py-0.5 text-xs font-black uppercase tracking-wide ${resolveCalloutBadgeClasses(
+                    calloutEntry.severity
+                  )}`}
+                >
+                  {calloutEntry.severity}
+                </span>
+                {calloutEntry.title && (
+                  <h3 className="font-bold tracking-tight text-white">{calloutEntry.title}</h3>
+                )}
               </div>
-              <p className="mt-1">{calloutEntry.message}</p>
+              <p className="mt-2 text-xs leading-relaxed opacity-95">{calloutEntry.message}</p>
             </div>
           ))}
         </div>

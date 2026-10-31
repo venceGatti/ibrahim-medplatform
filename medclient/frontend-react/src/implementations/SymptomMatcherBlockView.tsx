@@ -109,13 +109,54 @@ export interface SymptomMatcherBlockViewProps {
 
 export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = ({ block }) => {
   const [symptomInput, setSymptomInput] = useState<string>('');
+  const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
+  const [isDropdownVisible, setIsDropdownVisible] = useState<boolean>(true);
+
   const selectedSymptoms = useMedClientStore((state) => state.selectedSymptoms);
   const toggleSymptomPolarity = useMedClientStore((state) => state.toggleSymptomPolarity);
   const removeSymptom = useMedClientStore((state) => state.removeSymptom);
 
-  const suggestions = lookupHpoWithSymSpell(symptomInput);
+  const rawSuggestions = lookupHpoWithSymSpell(symptomInput);
+  const suggestions = isDropdownVisible ? rawSuggestions : [];
   const triage = block.triage_telemetry;
   const radarPoints = buildRadarPolygonPoints(block.differential_candidates);
+
+  const activeOptionId =
+    highlightedIndex >= 0 && highlightedIndex < suggestions.length
+      ? `hpo-opt-${suggestions[highlightedIndex].hpoId.replace(':', '-')}`
+      : undefined;
+
+  const handleInputKeyDown = (keyboardEvent: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (suggestions.length === 0) {
+      return;
+    }
+    if (keyboardEvent.key === 'ArrowDown') {
+      keyboardEvent.preventDefault();
+      setIsDropdownVisible(true);
+      setHighlightedIndex((previousIndex) =>
+        previousIndex + 1 >= suggestions.length ? 0 : previousIndex + 1
+      );
+    } else if (keyboardEvent.key === 'ArrowUp') {
+      keyboardEvent.preventDefault();
+      setIsDropdownVisible(true);
+      setHighlightedIndex((previousIndex) =>
+        previousIndex <= 0 ? suggestions.length - 1 : previousIndex - 1
+      );
+    } else if (keyboardEvent.key === 'Enter') {
+      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+        keyboardEvent.preventDefault();
+        const selectedEntry = suggestions[highlightedIndex];
+        toggleSymptomPolarity(selectedEntry.hpoId, 'PRESENT');
+        setSymptomInput('');
+        setHighlightedIndex(-1);
+        setIsDropdownVisible(false);
+      }
+    } else if (keyboardEvent.key === 'Escape') {
+      keyboardEvent.preventDefault();
+      setIsDropdownVisible(false);
+      setHighlightedIndex(-1);
+    }
+  };
 
   return (
     <section
@@ -141,65 +182,124 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
       )}
 
       <div className="space-y-2">
-        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-400">
+        <label
+          htmlFor="symptom-search-field"
+          className="block text-xs font-semibold uppercase tracking-wider text-slate-400"
+        >
           Ricerca Sintomi HPO (Sinonimi Colloquiali &amp; SymSpell d&le;2)
         </label>
         <input
+          id="symptom-search-field"
           type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-expanded={suggestions.length > 0}
+          aria-controls="symspell-suggestions-list"
+          aria-activedescendant={activeOptionId}
           value={symptomInput}
-          onChange={(ev) => setSymptomInput(ev.target.value)}
+          onChange={(ev) => {
+            setSymptomInput(ev.target.value);
+            setIsDropdownVisible(true);
+            setHighlightedIndex(-1);
+          }}
+          onKeyDown={handleInputKeyDown}
           aria-label="Es. fiato corto, dyspne (typo), dolore toracico..."
           className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
           data-testid="symptom-search-input"
         />
         {suggestions.length > 0 && (
-          <div className="flex flex-wrap gap-2 pt-1" data-testid="symspell-suggestions">
-            {suggestions.map((entry) => (
-              <button
-                key={entry.hpoId}
-                type="button"
-                onClick={() => {
-                  toggleSymptomPolarity(entry.hpoId, 'PRESENT');
-                  setSymptomInput('');
-                }}
-                className="rounded bg-blue-900/60 px-2.5 py-1 text-xs font-medium text-blue-200 hover:bg-blue-800"
-              >
-                + {entry.clinicalTerm} ({entry.hpoId})
-              </button>
-            ))}
+          <div
+            id="symspell-suggestions-list"
+            role="listbox"
+            aria-label="Suggerimenti vocabolario HPO"
+            className="flex flex-wrap gap-2 pt-1"
+            data-testid="symspell-suggestions"
+          >
+            {suggestions.map((entry, optionIndex) => {
+              const optionElementId = `hpo-opt-${entry.hpoId.replace(':', '-')}`;
+              const isOptionHighlighted = highlightedIndex === optionIndex;
+              return (
+                <button
+                  key={entry.hpoId}
+                  id={optionElementId}
+                  role="option"
+                  aria-selected={isOptionHighlighted}
+                  type="button"
+                  onClick={() => {
+                    toggleSymptomPolarity(entry.hpoId, 'PRESENT');
+                    setSymptomInput('');
+                    setHighlightedIndex(-1);
+                    setIsDropdownVisible(false);
+                  }}
+                  className={`flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-semibold transition ${
+                    isOptionHighlighted
+                      ? 'bg-blue-600 text-white ring-2 ring-blue-300'
+                      : 'bg-blue-900/60 text-blue-200 hover:bg-blue-800'
+                  }`}
+                  data-testid={`suggestion-item-${entry.hpoId}`}
+                >
+                  <span className="font-bold">+</span>
+                  <span>{entry.clinicalTerm}</span>
+                  <span className="font-mono text-blue-300">({entry.hpoId})</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>
 
-      <div className="flex flex-wrap gap-2" data-testid="active-symptom-tags">
-        {Object.entries(selectedSymptoms).map(([hpoCode, polarity]) => (
-          <div
-            key={hpoCode}
-            className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${
-              polarity === 'PRESENT'
-                ? 'border-emerald-500/60 bg-emerald-950/60 text-emerald-200'
-                : 'border-rose-500/60 bg-rose-950/60 text-rose-200'
-            }`}
-          >
-            <button
-              type="button"
-              onClick={() =>
-                toggleSymptomPolarity(hpoCode, polarity === 'PRESENT' ? 'ABSENT' : 'PRESENT')
-              }
-              data-testid={`toggle-symptom-${hpoCode}`}
+      <div className="flex flex-wrap gap-2.5" data-testid="active-symptom-tags">
+        {Object.entries(selectedSymptoms).map(([hpoCode, polarity]) => {
+          const isPresent = polarity === 'PRESENT';
+          return (
+            <div
+              key={hpoCode}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold shadow-sm transition ${
+                isPresent
+                  ? 'border-emerald-500 bg-emerald-950/80 text-emerald-100 ring-1 ring-emerald-500/50'
+                  : 'border-rose-500 bg-rose-950/80 text-rose-100 ring-1 ring-rose-500/50'
+              }`}
+              data-testid={`symptom-tag-${hpoCode}`}
             >
-              {hpoCode}: {polarity === 'PRESENT' ? 'PRESENTE' : 'NEGATIVO PERTINENTE'}
-            </button>
-            <button
-              type="button"
-              onClick={() => removeSymptom(hpoCode)}
-              className="ml-1 text-slate-400 hover:text-white"
-              aria-label={`Rimuovi ${hpoCode}`}
-            >
-              ×
-            </button>
-          </div>
-        ))}
+              <button
+                type="button"
+                onClick={() =>
+                  toggleSymptomPolarity(hpoCode, isPresent ? 'ABSENT' : 'PRESENT')
+                }
+                className="flex items-center gap-1.5"
+                data-testid={`toggle-symptom-${hpoCode}`}
+                aria-label={`Inverti polarita ${hpoCode}`}
+              >
+                {isPresent ? (
+                  <span
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-emerald-500 text-[10px] font-black text-slate-950"
+                    aria-hidden="true"
+                  >
+                    ✓
+                  </span>
+                ) : (
+                  <span
+                    className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-rose-600 text-[10px] font-black text-white"
+                    aria-hidden="true"
+                  >
+                    ✕
+                  </span>
+                )}
+                <span>
+                  {hpoCode}: {isPresent ? 'PRESENTE' : 'NEGATIVO PERTINENTE'}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => removeSymptom(hpoCode)}
+                className="ml-1 text-slate-400 hover:text-white"
+                aria-label={`Rimuovi ${hpoCode}`}
+              >
+                ×
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

@@ -22,8 +22,18 @@ import { SingletonWebGLBroker } from '../implementations/SingletonWebGLBroker';
 import { MolecularStructureViewer } from '../implementations/MolecularStructureViewer';
 import { MedClientAppShell } from '../implementations/MedClientAppShell';
 import { ExamSimulatorBlockView } from '../implementations/ExamSimulatorBlockView';
-import { lookupHpoWithSymSpell } from '../implementations/SymptomMatcherBlockView';
-import { resolveEgfrBadgeTheme } from '../implementations/DrugSafetyBlockView';
+import {
+  lookupHpoWithSymSpell,
+  SymptomMatcherBlockView,
+} from '../implementations/SymptomMatcherBlockView';
+import {
+  resolveClearanceGaugeColors,
+  resolveEgfrBadgeTheme,
+} from '../implementations/DrugSafetyBlockView';
+import {
+  resolveCalloutBadgeClasses,
+  resolveCalloutThemeClasses,
+} from '../implementations/ClinicalSheetBlockView';
 
 describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
   it('ROA-02 Dual Component Registry resolves canonical & legacy aliases and throws SDUINodeNotFoundError on unknown types', () => {
@@ -221,5 +231,95 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(client.currentCircuitState()).toBe('CLOSED');
     expect(client.computeBackoffDelayMs(0)).toBe(20);
     expect(client.computeBackoffDelayMs(2)).toBe(80);
+  });
+
+  it('UI/UX Clinical Ergonomics & Visual Interaction Hardening validates callouts, keyboard combobox, FDC and hotspot ring', () => {
+    // 1. Clinical Sheet Callouts & High-Contrast Themes
+    expect(resolveCalloutThemeClasses('RED_FLAG')).toContain('rose-600');
+    expect(resolveCalloutThemeClasses('BLACKBOX')).toContain('amber-500/20');
+    expect(resolveCalloutThemeClasses('CLINICAL_PEARL')).toContain('sky-600');
+    expect(resolveCalloutBadgeClasses('RED_FLAG')).toContain('bg-rose-600');
+    expect(resolveCalloutBadgeClasses('BLACKBOX')).toContain('bg-amber-500');
+    expect(resolveCalloutBadgeClasses('CLINICAL_PEARL')).toContain('bg-sky-600');
+
+    // 2. Clearance & eGFR animated progress colors
+    const optimalClearance = resolveClearanceGaugeColors(85);
+    expect(optimalClearance.textColorClass).toBe('text-emerald-400');
+    expect(optimalClearance.barBgClass).toBe('bg-emerald-500');
+    expect(optimalClearance.statusClassification).toBe('PRESERVED');
+
+    const moderateClearance = resolveClearanceGaugeColors(60);
+    expect(moderateClearance.textColorClass).toBe('text-amber-400');
+    expect(moderateClearance.barBgClass).toBe('bg-amber-500');
+    expect(moderateClearance.statusClassification).toBe('MODERATE');
+
+    const impairedClearance = resolveClearanceGaugeColors(25);
+    expect(impairedClearance.textColorClass).toBe('text-rose-500');
+    expect(impairedClearance.barBgClass).toBe('bg-rose-600');
+    expect(impairedClearance.statusClassification).toBe('IMPAIRED');
+
+    // 3. Symptom Matcher Keyboard Navigation & Combobox Accessibility
+    render(
+      <SymptomMatcherBlockView
+        block={{
+          block_type: 'SymptomMatcherBlock',
+          differential_candidates: [],
+          selected_symptoms: [],
+        }}
+      />
+    );
+    const searchInput = screen.getByTestId('symptom-search-input');
+    expect(searchInput.getAttribute('role')).toBe('combobox');
+    expect(searchInput.getAttribute('aria-autocomplete')).toBe('list');
+
+    fireEvent.change(searchInput, { target: { value: 'dyspnea' } });
+    const suggestionsContainer = screen.getByTestId('symspell-suggestions');
+    expect(suggestionsContainer).toBeTruthy();
+
+    // Navigate with ArrowDown
+    fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
+    expect(searchInput.getAttribute('aria-activedescendant')).toContain('hpo-opt-HP-0002094');
+
+    // Select with Enter
+    fireEvent.keyDown(searchInput, { key: 'Enter' });
+    expect(useMedClientStore.getState().selectedSymptoms['HP:0002094']).toBe('PRESENT');
+
+    // Verify high-contrast badges for PRESENT and ABSENT
+    const presentBadge = screen.getByTestId('toggle-symptom-HP:0002094');
+    expect(presentBadge.textContent).toContain('PRESENTE');
+    expect(presentBadge.textContent).toContain('✓');
+
+    fireEvent.click(presentBadge);
+    expect(useMedClientStore.getState().selectedSymptoms['HP:0002094']).toBe('ABSENT');
+    expect(presentBadge.textContent).toContain('NEGATIVO PERTINENTE');
+    expect(presentBadge.textContent).toContain('✕');
+
+    // 4. Hotspot Feedback Ring with R_tol <= 0.02
+    render(
+      <ExamSimulatorBlockView
+        block={{
+          block_type: 'AnatomicalHotspotBlock',
+          item_type: 'HOTSPOT',
+          question_spec: {
+            question_id: 'Q_TOLERANCE_TEST',
+            target_polygons: [
+              [
+                [0.1, 0.1],
+                [0.9, 0.1],
+                [0.5, 0.9],
+              ],
+            ],
+          },
+          fsrs_card_state: { stability: 2.0, difficulty: 5.0 },
+        }}
+      />
+    );
+    const hotspotCanvases = screen.getAllByTestId('hotspot-interactive-canvas');
+    const targetHotspotCanvas = hotspotCanvases[hotspotCanvases.length - 1];
+    fireEvent.click(targetHotspotCanvas, { clientX: 200, clientY: 100 });
+    const feedbackRings = screen.getAllByTestId('hotspot-feedback-ring');
+    const latestRing = feedbackRings[feedbackRings.length - 1];
+    expect(latestRing).toBeTruthy();
+    expect(latestRing.getAttribute('data-hit-status')).toBe('HIT');
   });
 });

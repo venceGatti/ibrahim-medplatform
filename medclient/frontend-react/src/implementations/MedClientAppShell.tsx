@@ -234,9 +234,11 @@ export const MedClientAppShell: React.FC = () => {
 
       <main className="mx-auto max-w-7xl p-6">
         <ClinicalViewErrorBoundary>
-          {/* Regola 8: Persistenza Assoluta nel DOM tramite visibilita CSS (hidden / block) */}
+          {/* Regola 8: Persistenza Assoluta nel DOM tramite visibilita CSS (hidden / block) a 60 FPS */}
           <div
-            className={activeTab === 'clinical_sheet' ? 'block' : 'hidden'}
+            className={`transition-opacity duration-150 ease-in-out ${
+              activeTab === 'clinical_sheet' ? 'block opacity-100' : 'hidden opacity-0'
+            }`}
             data-testid="dom-retained-view-clinical_sheet"
           >
             <ClinicalSheetBlockView
@@ -247,21 +249,27 @@ export const MedClientAppShell: React.FC = () => {
           </div>
 
           <div
-            className={activeTab === 'symptom_matcher' ? 'block' : 'hidden'}
+            className={`transition-opacity duration-150 ease-in-out ${
+              activeTab === 'symptom_matcher' ? 'block opacity-100' : 'hidden opacity-0'
+            }`}
             data-testid="dom-retained-view-symptom_matcher"
           >
             <SymptomMatcherBlockView block={DEFAULT_SYMPTOM_MATCHER} />
           </div>
 
           <div
-            className={activeTab === 'drug_safety' ? 'block' : 'hidden'}
+            className={`transition-opacity duration-150 ease-in-out ${
+              activeTab === 'drug_safety' ? 'block opacity-100' : 'hidden opacity-0'
+            }`}
             data-testid="dom-retained-view-drug_safety"
           >
             <DrugSafetyBlockView block={DEFAULT_DRUG_SAFETY} />
           </div>
 
           <div
-            className={activeTab === 'exam_simulator' ? 'block' : 'hidden'}
+            className={`transition-opacity duration-150 ease-in-out ${
+              activeTab === 'exam_simulator' ? 'block opacity-100' : 'hidden opacity-0'
+            }`}
             data-testid="dom-retained-view-exam_simulator"
           >
             <ExamSimulatorBlockView block={DEFAULT_EXAM_BLOCK} />

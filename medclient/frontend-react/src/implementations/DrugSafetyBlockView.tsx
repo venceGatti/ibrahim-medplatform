@@ -30,6 +30,32 @@ export function resolveEgfrBadgeTheme(egfrValue: number): {
   };
 }
 
+export function resolveClearanceGaugeColors(percentageScore: number): {
+  readonly textColorClass: string;
+  readonly barBgClass: string;
+  readonly statusClassification: 'PRESERVED' | 'MODERATE' | 'IMPAIRED';
+} {
+  if (percentageScore > 80) {
+    return {
+      textColorClass: 'text-emerald-400',
+      barBgClass: 'bg-emerald-500',
+      statusClassification: 'PRESERVED',
+    };
+  }
+  if (percentageScore >= 40) {
+    return {
+      textColorClass: 'text-amber-400',
+      barBgClass: 'bg-amber-500',
+      statusClassification: 'MODERATE',
+    };
+  }
+  return {
+    textColorClass: 'text-rose-500',
+    barBgClass: 'bg-rose-600',
+    statusClassification: 'IMPAIRED',
+  };
+}
+
 export function resolveInteractionSeverityLabel(level: 1 | 2 | 3 | 4): string {
   const labels: Record<1 | 2 | 3 | 4, string> = {
     1: 'CONTRAINDICATED',
@@ -51,6 +77,8 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
 
   const displayedEgfr = block.egfr ?? renalParameters.calculatedEgfr;
   const egfrTheme = resolveEgfrBadgeTheme(displayedEgfr);
+  const egfrScaledPercentage = Math.min(100, Math.max(0, Math.round((displayedEgfr / 120) * 100)));
+  const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);
 
   const hasBlackboxProdrugAlert = block.alerts.some(
     (alertItem) => alertItem.code === 'BLACKBOX_INEFFICACY' || alertItem.severity === 1
@@ -72,13 +100,23 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
         </div>
 
         <div
-          className={`rounded-lg border px-4 py-2 text-right ${egfrTheme.badgeClass}`}
+          className={`min-w-64 rounded-lg border px-4 py-2.5 shadow-sm ${egfrTheme.badgeClass}`}
           data-testid="egfr-status-badge"
           data-color={egfrTheme.colorName}
         >
-          <div className="text-xs font-semibold uppercase">{egfrTheme.stageLabel}</div>
+          <div className="flex items-center justify-between text-xs font-semibold uppercase">
+            <span>{egfrTheme.stageLabel}</span>
+            <span className={egfrGaugeColors.textColorClass}>{egfrScaledPercentage}%</span>
+          </div>
           <div className="font-mono text-lg font-bold">
             eGFR: {displayedEgfr.toFixed(1)} mL/min/1.73m²
+          </div>
+          <div className="mt-1.5 h-2 w-full overflow-hidden rounded-full bg-slate-800">
+            <div
+              style={{ width: `${egfrScaledPercentage}%` }}
+              className={`h-full transition-all duration-500 ease-out ${egfrGaugeColors.barBgClass}`}
+              data-testid="egfr-progress-bar"
+            />
           </div>
         </div>
       </div>
@@ -140,16 +178,44 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
 
       {hasBlackboxProdrugAlert && (
         <div
-          className="rounded-lg border-2 border-red-500 bg-red-950 p-4 text-red-100 shadow-lg"
+          className="relative rounded-xl border-2 border-rose-600 bg-rose-950 p-4 text-rose-100 shadow-2xl ring-2 ring-rose-600/50"
           data-testid="blackbox-prodrug-alert"
         >
-          <div className="font-bold uppercase tracking-wide text-red-300">
-            [BLACKBOX LEVEL 1 — BLOCCO BIOATTIVAZIONE PROFARMACO (ROA-10)]
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="rounded bg-rose-600 px-2.5 py-0.5 text-xs font-black uppercase tracking-wider text-white">
+                ALLERTA IMPERATIVA BLACKBOX LEVEL 1
+              </span>
+              <span className="font-bold tracking-wide text-rose-200">
+                BLOCCO BIOATTIVAZIONE PROFARMACO (ROA-10)
+              </span>
+            </div>
+            <span className="rounded border border-rose-400/30 bg-rose-900/60 px-2 py-0.5 text-[11px] font-mono text-rose-200">
+              CYP2C19-MEDIATO
+            </span>
           </div>
-          <p className="mt-1 text-sm">
-            Rilevata inibizione enzimatica critica (es. CYP2C19 Clopidogrel + Omeprazolo): fallimento
-            terapeutico per mancata conversione nel metabolita attivo.
+
+          <p className="mt-2 text-sm font-semibold text-white">
+            Interazione critica Clopidogrel + Inibitore di Pompa Protonica (Omeprazolo): inibizione
+            competitiva della conversione epatica nel metabolita tiolico attivo con perdita di
+            efficacia antiaggregante piastrinica e aumento del rischio di trombosi dello stent.
           </p>
+
+          <div className="mt-3 rounded-lg border border-amber-500/50 bg-amber-950/70 p-3 text-xs text-amber-200">
+            <div className="font-bold uppercase tracking-wider text-amber-300">
+              Indicazione Linea Guida Clinica Alternativa (ESC / FDA / CPIC):
+            </div>
+            <ul className="mt-1 list-inside list-disc space-y-0.5 text-slate-200">
+              <li>
+                <strong className="text-white">Gastroprotezione alternativa:</strong> Sostituire
+                Omeprazolo/Esomeprazolo con <span className="font-bold text-emerald-300">Pantoprazolo</span> (minimo potenziale di inibizione su CYP2C19).
+              </li>
+              <li>
+                <strong className="text-white">Opzione antiaggregante alternativa:</strong> Se indicato,
+                valutare switch da Clopidogrel a <span className="font-bold text-emerald-300">Prasugrel</span> o <span className="font-bold text-emerald-300">Ticagrelor</span> (farmacocinetica indipendente dall&apos;isoenzima CYP2C19).
+              </li>
+            </ul>
+          </div>
         </div>
       )}
 
@@ -164,15 +230,26 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
       )}
 
       {block.fdc_decompositions && block.fdc_decompositions.length > 0 && (
-        <div className="flex flex-wrap gap-2" data-testid="fdc-decomposition-badges">
-          {block.fdc_decompositions.map((fdcItem) => (
-            <span
-              key={fdcItem.brand_or_combo_name}
-              className="rounded border border-purple-500/40 bg-purple-950/50 px-2.5 py-1 text-xs text-purple-200"
-            >
-              FDC {fdcItem.brand_or_combo_name} &rarr; {fdcItem.active_principles.join(' + ')}
-            </span>
-          ))}
+        <div className="space-y-1.5" data-testid="fdc-decomposition-badges">
+          <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
+            Decomposizione FDC (Combinazioni a Dose Fissa)
+          </span>
+          <div className="flex flex-wrap gap-2 pt-0.5">
+            {block.fdc_decompositions.map((fdcItem) => (
+              <div
+                key={fdcItem.brand_or_combo_name}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-950/60 px-3 py-1.5 text-xs text-purple-200 shadow-sm"
+                data-testid={`fdc-badge-${fdcItem.brand_or_combo_name}`}
+              >
+                <span className="font-extrabold text-purple-400">FDC:</span>
+                <span className="font-bold text-white">{fdcItem.brand_or_combo_name}</span>
+                <span className="text-purple-300">&rarr;</span>
+                <span className="font-medium text-purple-100">
+                  {fdcItem.active_principles.join(' + ')}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -185,20 +262,21 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
             const rawClearance = block.cyp_clearance[enzymeId] ?? 1.0;
             const boundedClearance = Math.max(0.0, Math.min(1.0, rawClearance));
             const pct = Math.round(boundedClearance * 100);
+            const gaugeColors = resolveClearanceGaugeColors(pct);
             return (
               <div
                 key={enzymeId}
-                className="rounded border border-slate-800 bg-slate-950 p-3"
+                className="rounded-lg border border-slate-800 bg-slate-950 p-3 shadow-sm"
                 data-testid={`cyp-gauge-${enzymeId}`}
               >
                 <div className="flex justify-between text-xs font-bold">
                   <span className="text-slate-300">{enzymeId}</span>
-                  <span className={pct < 40 ? 'text-red-400' : 'text-emerald-400'}>{pct}%</span>
+                  <span className={gaugeColors.textColorClass}>{pct}%</span>
                 </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded bg-slate-800">
+                <div className="mt-2 h-2.5 w-full overflow-hidden rounded-full bg-slate-800">
                   <div
                     style={{ width: `${pct}%` }}
-                    className={`h-full ${pct < 40 ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    className={`h-full transition-all duration-500 ease-out ${gaugeColors.barBgClass}`}
                   />
                 </div>
               </div>
