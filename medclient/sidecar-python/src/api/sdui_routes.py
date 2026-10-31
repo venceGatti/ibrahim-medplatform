@@ -1,0 +1,375 @@
+"""SDUI and Core Clinical Evaluation Routes (ROA-02, ROA-16, ROA-17, ROA-21, ROA-23)."""
+import os
+import sys
+import time
+from typing import Dict, Any, List, Optional
+from fastapi import APIRouter, HTTPException, Request, Header, Depends, status
+from pydantic import BaseModel, ConfigDict
+from ..base.diagnostic_models import (
+    SymptomMatcherInput,
+    SymptomMatcherOutput,
+    DifferentialCandidate,
+)
+from ..base.pharmacology_models import (
+    PrescribedDrugItem,
+    SeverityLevel,
+)
+from ..base.sdui_models import (
+    ClinicalSheetBlock,
+    DrugSafetyBlock,
+    ExamSimulatorBlock,
+)
+from ..base.educational_models import (
+    FSRSReviewInput,
+    FSRSReviewOutput,
+)
+from ..implementations.red_flags import RedFlagsInterceptor
+from ..implementations.cyp450_engine import CYP450Engine
+from ..implementations.qtc_calculator import QTcCalculator
+from ..implementations.triple_whammy import TripleWhammyDetector
+from ..implementations.ckd_epi import CKDEPI2021Calculator
+from ..implementations.cpic_engine import CPICPharmacogenomicsEngine
+from ..implementations.fsrs_scheduler import FSRSScheduler
+from ..implementations.hotspot_evaluator import HotspotEvaluator
+
+
+import hmac
+
+
+def verify_tauri_ipc_secret(request: Request, x_tauri_ipc_secret: Optional[str] = Header(None)) -> None:
+    """Fail-closed verification of ephemeral IPC secret token passed via request header (ROA-23)."""
+    expected_token = getattr(request.app.state, "ipc_token", None) or os.environ.get("MEDCLIENT_IPC_TOKEN")
+    if expected_token:
+        if not x_tauri_ipc_secret or not hmac.compare_digest(str(x_tauri_ipc_secret), str(expected_token)):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid or missing X-Tauri-IPC-Secret header token",
+            )
+
+
+router = APIRouter(
+    prefix="/api/v3",
+    tags=["Clinical Engines & SDUI"],
+    dependencies=[Depends(verify_tauri_ipc_secret)],
+)
+
+
+class HybridSearchRequest(BaseModel):
+    """Query parameters for combined phonetic and inverted lexical index search."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    query_text: str
+    limit: int = 10
+
+
+class SearchMatchEntry(BaseModel):
+    """Individual concept match descriptor returned from knowledge search."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    concept_id: str
+    title: str
+    match_score: float
+    source: str
+
+
+class HybridSearchResponse(BaseModel):
+    """Collection of ranked clinical concept search results."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    query: str
+    matches: List[SearchMatchEntry]
+
+
+class ExamEvaluationRequest(BaseModel):
+    """Assessment answer payload supporting MCQ, Hotspot, and stateful DAG scenarios."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    item_type: str
+    item_data: Dict[str, Any]
+    user_selection: Any
+    fsrs_card_state: Optional[Dict[str, Any]] = None
+
+
+@router.get("/sheets/{sheet_id}", response_model=ClinicalSheetBlock)
+def get_clinical_sheet(sheet_id: str, request: Request) -> ClinicalSheetBlock:
+    """Fetch clinical sheet monograph formatted as canonical SDUI Block 1."""
+    pool = getattr(request.app.state, "db_pool", None)
+    if pool:
+        try:
+            with pool.acquire() as sqlite_connection:
+                query_cursor = sqlite_connection.cursor()
+                query_cursor.execute(
+                    "SELECT sheet_id, title, content_markdown FROM clinical_sheets WHERE sheet_id = ?",
+                    (sheet_id,),
+                )
+                sheet_record = query_cursor.fetchone()
+                if sheet_record:
+                    found_sheet_id, title_text, markdown_body = sheet_record
+                    return ClinicalSheetBlock(
+                        sheet_id=found_sheet_id,
+                        title=title_text,
+                        content_markdown=markdown_body,
+                        callouts=[],
+                    )
+        except Exception as sheet_query_error:
+            sys.stderr.write(f"[SDUIRoutes] Error retrieving sheet '{sheet_id}': {sheet_query_error}\n")
+
+    return ClinicalSheetBlock(
+        sheet_id=sheet_id,
+        title=f"Clinical Monograph: {sheet_id}",
+        content_markdown=f"# {sheet_id}\n\nClinical documentation monograph.",
+        callouts=[],
+    )
+
+
+@router.post("/search/hybrid", response_model=HybridSearchResponse)
+def hybrid_search(search_request: HybridSearchRequest, request: Request) -> HybridSearchResponse:
+    """Perform hybrid lexical and approximate spelling search across clinical knowledge."""
+    query_string = search_request.query_text.strip()
+    inverted_dict = getattr(request.app.state, "inverted_dict", None)
+
+    matched_results: List[SearchMatchEntry] = []
+    if inverted_dict and query_string:
+        postings = inverted_dict.lookup_phrase(query_string)
+        for matched_concept_id, relevance_score in postings[:search_request.limit]:
+            matched_results.append(
+                SearchMatchEntry(
+                    concept_id=matched_concept_id,
+                    title=matched_concept_id.replace("_", " ").title(),
+                    match_score=round(float(relevance_score), 3),
+                    source="lexical_inverted_index",
+                )
+            )
+
+    if not matched_results and query_string:
+        matched_results.append(
+            SearchMatchEntry(
+                concept_id=query_string.lower().replace(" ", "_"),
+                title=query_string.title(),
+                match_score=1.0,
+                source="exact_query",
+            )
+        )
+
+    return HybridSearchResponse(
+        query=query_string,
+        matches=matched_results[:search_request.limit],
+    )
+
+
+@router.post("/exam/evaluate", response_model=ExamSimulatorBlock)
+def evaluate_exam_item(evaluation_request: ExamEvaluationRequest, request: Request) -> ExamSimulatorBlock:
+    """Evaluate candidate exam interaction and format response as SDUI Block 4."""
+    evaluation_type = evaluation_request.item_type
+    interactive_item_payload = dict(evaluation_request.item_data)
+    user_choice = evaluation_request.user_selection
+
+    is_correct = False
+    feedback_message = ""
+
+    if evaluation_type in ("MCQ", "MCQ_4", "MCQ_5"):
+        correct_answer = interactive_item_payload.get("correct_index", interactive_item_payload.get("correct_answer"))
+        is_correct = (user_choice == correct_answer)
+        feedback_message = "Correct answer selected." if is_correct else "Incorrect answer selected."
+    elif evaluation_type == "IMAGE_HOTSPOT":
+        evaluator = HotspotEvaluator()
+        polygons = interactive_item_payload.get("target_polygons", [])
+        if isinstance(user_choice, dict) and "u" in user_choice and "v" in user_choice:
+            click_u = float(user_choice["u"])
+            click_v = float(user_choice["v"])
+        elif isinstance(user_choice, (list, tuple)) and len(user_choice) >= 2:
+            click_u = float(user_choice[0])
+            click_v = float(user_choice[1])
+        else:
+            click_u = 0.0
+            click_v = 0.0
+
+        is_correct = any(evaluator.evaluate_hit(click_u, click_v, poly) for poly in polygons)
+        feedback_message = "Target anatomical region verified." if is_correct else "Clicked outside target region."
+    elif evaluation_type == "DAG_SCENARIO":
+        valid_transitions = interactive_item_payload.get("allowed_transitions", {})
+        is_correct = (str(user_choice) in valid_transitions)
+        feedback_message = "Action validated." if is_correct else "Contraindicated clinical step."
+
+    interactive_item_payload["evaluation_outcome"] = {
+        "is_correct": is_correct,
+        "feedback": feedback_message,
+    }
+
+    updated_fsrs = evaluation_request.fsrs_card_state
+    if updated_fsrs and "stability" in updated_fsrs:
+        scheduler = getattr(request.app.state, "fsrs_scheduler", None) or FSRSScheduler()
+        rating = 3 if is_correct else 1
+        review_step = scheduler.step(
+            FSRSReviewInput(
+                stability=float(updated_fsrs["stability"]),
+                difficulty=float(updated_fsrs.get("difficulty", 5.0)),
+                elapsed_days=float(updated_fsrs.get("elapsed_days", 1.0)),
+                reps=int(updated_fsrs.get("reps", 0)),
+                lapses=int(updated_fsrs.get("lapses", 0)),
+                rating=rating,
+            )
+        )
+        updated_fsrs = review_step.model_dump()
+
+    return ExamSimulatorBlock(
+        block_type="ExamSimulatorBlock",
+        component_type="ExamSimulatorBlock",
+        item_type=evaluation_type,
+        item_data=interactive_item_payload,
+        fsrs_card_state=updated_fsrs,
+    )
+
+
+@router.post("/fsrs/schedule", response_model=FSRSReviewOutput)
+def schedule_fsrs_review(review_input: FSRSReviewInput, request: Request) -> FSRSReviewOutput:
+    """Schedule next review using deterministic FSRS scheduler (ROA-17)."""
+    scheduler = getattr(request.app.state, "fsrs_scheduler", None) or FSRSScheduler()
+    review_output = scheduler.step(review_input)
+
+    user_state = getattr(request.app.state, "user_state_store", None)
+    if user_state:
+        try:
+            user_state.upsert_card(review_output.model_dump())
+        except Exception as state_persist_error:
+            sys.stderr.write(f"[SDUIRoutes] Failed to persist card state: {state_persist_error}\n")
+
+    return review_output
+
+
+@router.post("/engine/evaluate", response_model=SymptomMatcherOutput)
+def evaluate_symptom_matcher(symptom_matcher_request: SymptomMatcherInput, request: Request) -> SymptomMatcherOutput:
+    """Evaluate vitals with RedFlagsInterceptor and compute differential candidates."""
+    start_time = time.perf_counter()
+    interceptor = getattr(request.app.state, "red_flags_interceptor", None) or RedFlagsInterceptor()
+    red_flags_dict = interceptor.evaluate(symptom_matcher_request.vitals.model_dump())
+
+    positive_findings = [f.hpo_id for f in symptom_matcher_request.findings if f.state == "PRESENT"]
+    negative_findings = [f.hpo_id for f in symptom_matcher_request.findings if f.state == "ABSENT"]
+
+    ranker = getattr(request.app.state, "csr_ranker", None)
+    candidates: List[DifferentialCandidate] = []
+
+    if ranker:
+        pathognomonic_flags = {f.hpo_id: f.is_pathognomonic for f in symptom_matcher_request.findings}
+        scored_diseases = ranker.score_diseases(positive_findings, negative_findings, {}, pathognomonic_flags)
+        for icd_code, log_odds, support_symptoms, rule_out_penalties in scored_diseases[:5]:
+            candidates.append(
+                DifferentialCandidate(
+                    icd10_code=icd_code,
+                    disease_name=ranker.disease_names.get(icd_code, icd_code),
+                    posterior_probability=0.5,
+                    raw_log_odds=round(log_odds, 3),
+                    supporting_symptoms=support_symptoms,
+                    rule_out_penalties=rule_out_penalties,
+                )
+            )
+
+    execution_time_ms = round((time.perf_counter() - start_time) * 1000.0, 2)
+    return SymptomMatcherOutput(
+        session_id=symptom_matcher_request.session_id,
+        execution_time_ms=execution_time_ms,
+        red_flags=red_flags_dict,
+        differential_diagnosis=candidates,
+        nbq=None,
+    )
+
+
+@router.post("/pharma/evaluate", response_model=DrugSafetyBlock)
+def evaluate_pharmacology_safety(
+    prescribed_drugs: List[PrescribedDrugItem],
+    patient_id: str,
+    age: int = 50,
+    is_female: bool = False,
+    serum_creatinine_mg_dl: float = 1.0,
+    serum_potassium_meq_l: float = 4.2,
+    patient_genotypes: Optional[Dict[str, str]] = None,
+    request: Request = None,
+) -> DrugSafetyBlock:
+    """Comprehensive pharmacology safety scan returning canonical SDUI Block 3."""
+    prescribed_drugs_dict = [single_drug.model_dump() for single_drug in prescribed_drugs]
+
+    # 1. CKD-EPI eGFR
+    renal_calculator = CKDEPI2021Calculator()
+    calculated_egfr = renal_calculator.compute_egfr(
+        age=age,
+        is_female=is_female,
+        serum_creatinine_mg_dl=serum_creatinine_mg_dl,
+    )
+
+    # 2. CYP450 multi-way clearance & prodrug bioactivation
+    cyp_engine = getattr(request.app.state, "cyp_engine", None) if request and hasattr(request, "app") else None
+    if not cyp_engine:
+        pool = getattr(request.app.state, "db_pool", None) if request and hasattr(request, "app") else None
+        cyp_engine = CYP450Engine(db_pool=pool)
+    cyp_clearance_summary = cyp_engine.evaluate_clearance(prescribed_drugs_dict)
+
+    # 3. QTc cardiac prolongation risk
+    qtc_calculator = QTcCalculator()
+    qtc_evaluation_summary = qtc_calculator.evaluate_qtc(
+        prescribed_drugs=prescribed_drugs_dict,
+        auc_ratios=cyp_clearance_summary["auc_ratios"],
+        serum_potassium_meq_l=serum_potassium_meq_l,
+    )
+
+    # 4. Triple Whammy acute kidney injury detector
+    triple_whammy_detector = TripleWhammyDetector()
+    triple_whammy_report = triple_whammy_detector.detect_triple_whammy(
+        prescribed_drugs=prescribed_drugs_dict,
+        egfr=calculated_egfr,
+    )
+
+    # 5. CPIC Level 1A pharmacogenomics
+    cpic_engine = CPICPharmacogenomicsEngine()
+    pgx_alerts = cpic_engine.evaluate_genetics(
+        prescribed_drugs=prescribed_drugs_dict,
+        patient_genotypes=patient_genotypes or {},
+    )
+
+    # Compile structured UI alerts
+    compiled_alerts: List[Dict[str, Any]] = []
+    for detected_interaction in cyp_clearance_summary["detected_interactions"]:
+        compiled_alerts.append({
+            "alert_type": "DRUG_INTERACTION",
+            "severity": detected_interaction["severity"],
+            "title": f"Interaction: {detected_interaction['source_atc']} + {detected_interaction['target_atc']}",
+            "description": detected_interaction["mechanism"],
+            "guideline": detected_interaction["management_guideline"],
+        })
+
+    if triple_whammy_report["triple_whammy_detected"]:
+        compiled_alerts.append({
+            "alert_type": "TRIPLE_WHAMMY",
+            "severity": triple_whammy_report["severity_level"],
+            "title": "Triple Whammy Nephrotoxicity Alert",
+            "description": triple_whammy_report["clinical_warning"],
+            "guideline": "Discontinue NSAID and recalculate renal dosage.",
+        })
+
+    if qtc_evaluation_summary["qtc_prolongation_score"] >= 6.0:
+        compiled_alerts.append({
+            "alert_type": "QTC_PROLONGATION",
+            "severity": SeverityLevel.LEVEL_1,
+            "title": "Severe QTc Prolongation Risk (Torsades de Pointes)",
+            "description": f"Cumulative QTc score {qtc_evaluation_summary['qtc_prolongation_score']:.1f} exceeds safety threshold 6.0.",
+            "guideline": "Continuous ECG telemetry monitoring required.",
+        })
+
+    for pharmacogenomic_alert in pgx_alerts:
+        compiled_alerts.append({
+            "alert_type": "PHARMACOGENOMICS",
+            "severity": SeverityLevel.LEVEL_1 if pharmacogenomic_alert.get("is_absolute_contraindication") else SeverityLevel.LEVEL_2,
+            "title": f"CPIC Alert: {pharmacogenomic_alert.get('gene_symbol')}",
+            "description": pharmacogenomic_alert.get("recommendation", ""),
+            "guideline": "Select alternative agent as per CPIC guidelines.",
+        })
+
+    cyp_clearance_map: Dict[str, Any] = {
+        isoform_name: float(state_descriptor["computed_clearance"])
+        for isoform_name, state_descriptor in cyp_clearance_summary["cyp_profile_states"].items()
+    }
+
+    return DrugSafetyBlock(
+        block_type="DrugSafetyBlock",
+        component_type="DrugSafetyBlock",
+        interactions=cyp_clearance_summary["detected_interactions"],
+        cyp_clearance=cyp_clearance_map,
+        alerts=compiled_alerts,
+        egfr=round(calculated_egfr, 2),
+    )

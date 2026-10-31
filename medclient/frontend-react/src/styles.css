@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.sdui-virtual-row {
+  contain: layout style paint;
+}

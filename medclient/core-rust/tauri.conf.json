@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "MedClient",
+  "version": "0.1.0",
+  "identifier": "com.medplatform.medclient",
+  "build": {
+    "frontendDist": "../frontend-react/dist",
+    "devUrl": "http://127.0.0.1:5173",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "MedClient Clinical Workstation",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' med-asset: http://127.0.0.1:*; img-src 'self' med-asset: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:*",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$APPDATA/media/**"]
+      }
+    }
+  }
+}

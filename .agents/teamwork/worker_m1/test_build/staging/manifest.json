@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.2.0",
+  "pack_id": "cardio_2026",
+  "display_title": "Modulo Cardiologia e Farmacologia 2026",
+  "build_epoch_timestamp": 0,
+  "compiler_toolchain": "medfactory-dla-v1.4.2",
+  "standards": {
+    "hpo_release": "2024-04-13",
+    "icd10_version": "2019-v1",
+    "atc_index_year": 2024
+  },
+  "storage": {
+    "uncompressed_bytes": 159500,
+    "compressed_bytes": 7517,
+    "total_parent_chunks": 1,
+    "total_child_chunks": 1,
+    "total_vectors": 1
+  },
+  "checksums": {
+    "module_kb_sqlite": "aedde37256126089d61bad09fc0aba0878753189008c8b41f37237adea1eeac1",
+    "vector_index_bin": "d6fd9de5bccf223f523b316c9cd1cf9a9d87ea42473d68e011dad13f09bf8917",
+    "vector_meta_bin": "ec9e41b262aaafea1d7eba78273893584520ca9d741116249625ff0be6a8af3e",
+    "assets_media_blob": "5c9d52333e6fc6a8d377ae053692329dbbe1eee7423282eaec0d9f6568b77070",
+    "assets_media_manifest": "1d3d372a45dc8bac292641a74a6b992847cd0fb14c7aba4a1c7078f8610f8d0a"
+  },
+  "checksums_sha256": {
+    "module_kb.sqlite": "3bffb369942ba452f3d26b9c3f011e1de1518c669a25693cc794725055a73177",
+    "vector_index/index.bin": "5f70bf18a086007016e948b04aed3b82103a36bea41755b6cddfaf10ace3c6ef",
+    "vector_index/meta.bin": "6caf38d537984e261527b8caef5f990fb91415a1db917198821a79ed28997973",
+    "assets_media/blob.bin": "1bd8d04bb127c9dbdb406c3c213b202c84dc75f122ecd553b02fb322bffafdc9",
+    "assets_media/media_manifest.cbor": "e0c1f4455783b6b2f152b526c2a73dab0f5c3812b6300ee12913371616f65034"
+  },
+  "signature_ed25519": "9341fe870eb0d9fed40f81d4a20e0e089ca5479b636833239735753f4adff259c22440ce98554989b2ddcd77ac0d5850354db75b39a6b6c438a882e557099a0a"
+}

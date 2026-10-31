@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.2.0",
+  "pack_version": "1.2.0",
+  "pack_id": "cardio_2026",
+  "module_id": "cardio_2026",
+  "display_title": "Modulo Clinico Cardiologia e Medicina Interna 2026",
+  "build_epoch_timestamp": 0,
+  "build_timestamp": "1970-01-01T00:00:00Z",
+  "compiler_toolchain": "medfactory-dla-v1.4.2",
+  "dla_engine_version": "medfactory-dla-v1.4.2",
+  "standards": {
+    "hpo_release": "2024-04-13",
+    "icd10_version": "2019-v1",
+    "atc_index_year": 2024
+  },
+  "storage": {
+    "uncompressed_bytes": 658191,
+    "compressed_bytes": 32529,
+    "total_parent_chunks": 3,
+    "total_child_chunks": 3,
+    "total_vectors": 3
+  },
+  "checksums": {
+    "module_kb_sqlite": "fc9bdf6bb7a5d093b292f00b93c28be9bfdbbe01d697ea07aaa6805ff050bd53",
+    "zstd_dict": "f293a56dd18921b283e120c50b1f14ab2e7f6ae5dd5ba983676232db2fe794b3",
+    "vector_index_bin": "a8a42548d86ce1888ceefec6b649093c015a2cb640835771cccde457688edf09",
+    "vector_meta_bin": null,
+    "assets_media_blob": null,
+    "assets_media_manifest": null
+  },
+  "checksums_blake3": {
+    "assets/schede_statiche/sheet_aortic_stenosis.md": "2815322eabc80281a5b24eb501f057b1e204e5f3133c98165a9999ce15c7c3d4",
+    "assets/schede_statiche/sheet_aortic_stenosis.md.zst": "5f06446124aabcd6a249ab3a61f57a0e4cce2d60e3512323677f63af9ee2855d",
+    "assets/schede_statiche/sheet_pulmonary_embolism.md": "41c3c752790140206580ad8651ca008c58d5d42cbdf5b89d8da338cdb4ffb306",
+    "assets/schede_statiche/sheet_pulmonary_embolism.md.zst": "98c9b0655c415dd1f502b926d6867b79e877fbd29db73270b89d8114a3cd53d3",
+    "assets/schede_statiche/sheet_stemi_anterior.md": "ad3578a9b3cad53bc44ade8686a15ee1c4638950e9e280cbd600fb5cb1a46ec2",
+    "assets/schede_statiche/sheet_stemi_anterior.md.zst": "911022cd5e19db71b5095190935ba8f79b972e24848fb158fe1ed524b4c18eb7",
+    "assets_media/blob.bin": "b967590ce49a138ea5b13db7b07222e432de522aa8d5e1adb93fae75559d6eb2",
+    "assets_media/media_manifest.cbor": "b459116708762e425e06464f58c20a124d36b13c9c4429e657a2f709cebf1785",
+    "database/module_kb.sqlite": "fc9bdf6bb7a5d093b292f00b93c28be9bfdbbe01d697ea07aaa6805ff050bd53",
+    "media/289b28fc25ff1d555168c26d49346aaa065ba58d1909e5a15fcad5d40292b287.webp": "b967590ce49a138ea5b13db7b07222e432de522aa8d5e1adb93fae75559d6eb2",
+    "media/5bc1488d814d34426855c45c3d948747273881e082ad8cc7cbcf996ac4039dec.svg": "a696c6b12e90000055b434f40b82195c67dae30da3f8ae88439cccbd3c11fcc6",
+    "module_kb.sqlite": "fc9bdf6bb7a5d093b292f00b93c28be9bfdbbe01d697ea07aaa6805ff050bd53",
+    "vector_index/index.bin": "a8a42548d86ce1888ceefec6b649093c015a2cb640835771cccde457688edf09",
+    "vector_index/meta.bin": "5020377eb4d0d29e81596fdeb9e621b721ead00f6910b2cc687b1b9180af73a2",
+    "zstd.dict": "f293a56dd18921b283e120c50b1f14ab2e7f6ae5dd5ba983676232db2fe794b3"
+  },
+  "checksums_sha256": {
+    "assets/schede_statiche/sheet_aortic_stenosis.md": "1afc8d23217274ed806828ad0a3b86c50a8d079adaeba2fa52875c1aca430f2f",
+    "assets/schede_statiche/sheet_aortic_stenosis.md.zst": "71d17c6e961ed35459d44f2ddcd1a433d24990ef0f7ca42e072a25f0e6857cff",
+    "assets/schede_statiche/sheet_pulmonary_embolism.md": "f67494980ad0676405b9307f2f0d4c8e9c3d91dea42eedbf772ee0eeebdc20ab",
+    "assets/schede_statiche/sheet_pulmonary_embolism.md.zst": "d03db4002467f6725212d4d540b57c31c8b36e78fe92b64fc4e5736be3a95c9d",
+    "assets/schede_statiche/sheet_stemi_anterior.md": "b8a16e14a4dd067cb6affd48451bde95567b285b6cc94bb81db837b728e1f8a3",
+    "assets/schede_statiche/sheet_stemi_anterior.md.zst": "44c6a209e2578eaeab3c2ae0b781648fce628164c08a7033064ff5fc827af1e7",
+    "assets_media/blob.bin": "289b28fc25ff1d555168c26d49346aaa065ba58d1909e5a15fcad5d40292b287",
+    "assets_media/media_manifest.cbor": "34cd20cd8a8490c329b9ad5ffa91def8a54d286137273118f802680234b7112b",
+    "database/module_kb.sqlite": "2f1b771aeea70b850063ce882382e01595bc259ba0e572f0dbb220a48dd882f3",
+    "media/289b28fc25ff1d555168c26d49346aaa065ba58d1909e5a15fcad5d40292b287.webp": "289b28fc25ff1d555168c26d49346aaa065ba58d1909e5a15fcad5d40292b287",
+    "media/5bc1488d814d34426855c45c3d948747273881e082ad8cc7cbcf996ac4039dec.svg": "5bc1488d814d34426855c45c3d948747273881e082ad8cc7cbcf996ac4039dec",
+    "module_kb.sqlite": "2f1b771aeea70b850063ce882382e01595bc259ba0e572f0dbb220a48dd882f3",
+    "vector_index/index.bin": "c075ff23b3d81bfc04485ae2c4d7441af4d32cc39acd4c4ab0eab72821addde5",
+    "vector_index/meta.bin": "d32265d5f29bd4b7d3f8e1b9f4347450922f375666c331210c1a6a3bca699277",
+    "zstd.dict": "6ad6aae09e490091c5510707b780cb56a7dd490f9e751d82f1af639bf7cafaea"
+  },
+  "public_key_ed25519": "b95048ac1d4a6988722d8dfbc7974643079a208c63c0f5523ac171ac320b63f6",
+  "signature_ed25519": "8383dccd49a2959dc623b418c85c5c5e5bd0bb792db7ad0b8ef290ca059bbd3f574bdc7fdba9dccc318e2e13ae0fe8e9a4067e04c4eaac41a1a1da60670eda06"
+}

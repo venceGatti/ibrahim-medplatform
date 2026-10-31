@@ -1,0 +1,37 @@
+# Virtual Environments
+agent_env/
+.venv/
+env/
+venv/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Rust Target
+target/
+medclient/core-rust/target/
+
+# Node & Frontend Build
+node_modules/
+medclient/frontend-react/node_modules/
+dist/
+medclient/frontend-react/dist/
+
+# Ephemeral Tokens & Sensitive Logs
+.agent_token
+*.log
+
+# Personal Audio & Transient Downloads
+*.ogg
+
+# SQLite Local State and Journal Files
+*.db-journal
+*.db-wal
+*.db-shm
+user_state.sqlite-wal
+user_state.sqlite-shm

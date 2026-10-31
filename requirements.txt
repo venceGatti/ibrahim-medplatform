@@ -1,0 +1,6 @@
+crewai==1.15.33
+google-genai==2.34.0
+google-api-core==2.43.2
+langchain-google-genai==4.4.2
+pydantic==2.12.5
+python-dotenv==1.2.4

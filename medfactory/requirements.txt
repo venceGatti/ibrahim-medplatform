@@ -1,0 +1,14 @@
+blake3==1.0.4
+cryptography==50.0.2
+docling-core==2.105.0
+fastapi==0.115.6
+numpy==2.2.3
+pandas==3.1.0
+pillow==11.1.0
+polars==1.21.0
+pydantic==2.12.5
+pydantic-settings==2.16.2
+pyhpo==3.3.0
+pypdfium2==5.14.0
+pytest==8.3.4
+zstandard==0.25.0
