@@ -20,6 +20,10 @@ from ..base.sdui_models import (
     ClinicalSheetBlock,
     DrugSafetyBlock,
     ExamSimulatorBlock,
+    HybridSearchRequest,
+    SearchMatchEntry,
+    HybridSearchResponse,
+    ExamEvaluationRequest,
 )
 from ..base.educational_models import (
     FSRSReviewInput,
@@ -35,8 +39,6 @@ from ..implementations.fsrs_scheduler import FSRSScheduler
 from ..implementations.hotspot_evaluator import HotspotEvaluator
 from ..implementations.softmax_normalizer import LogSumExpNormalizer
 from ..implementations.active_discriminator import ActiveDiscriminator
-
-
 import hmac
 
 
@@ -55,38 +57,6 @@ router = APIRouter(
     tags=["Clinical Engines & SDUI"],
     dependencies=[Depends(verify_tauri_ipc_secret)],
 )
-
-
-class HybridSearchRequest(BaseModel):
-    """Query parameters for combined phonetic and inverted lexical index search."""
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    query_text: str
-    limit: int = 10
-
-
-class SearchMatchEntry(BaseModel):
-    """Individual concept match descriptor returned from knowledge search."""
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    concept_id: str
-    title: str
-    match_score: float
-    source: str
-
-
-class HybridSearchResponse(BaseModel):
-    """Collection of ranked clinical concept search results."""
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    query: str
-    matches: List[SearchMatchEntry]
-
-
-class ExamEvaluationRequest(BaseModel):
-    """Assessment answer payload supporting MCQ, Hotspot, and stateful DAG scenarios."""
-    model_config = ConfigDict(frozen=True, extra="forbid")
-    item_type: str
-    item_data: Dict[str, Any]
-    user_selection: Any
-    fsrs_card_state: Optional[Dict[str, Any]] = None
 
 
 @router.get("/sheets/{sheet_id}", response_model=ClinicalSheetBlock)
@@ -309,24 +279,48 @@ def evaluate_symptom_matcher(symptom_matcher_request: SymptomMatcherInput, reque
 
 @router.post("/pharma/evaluate", response_model=DrugSafetyBlock)
 def evaluate_pharmacology_safety(
-    prescribed_drugs: List[PrescribedDrugItem],
-    patient_id: str,
-    age: int = 50,
-    is_female: bool = False,
-    serum_creatinine_mg_dl: float = 1.0,
-    serum_potassium_meq_l: float = 4.2,
-    patient_genotypes: Optional[Dict[str, str]] = None,
-    request: Request = None,
+    request: Request,
+    evaluation_payload: Union[PharmaEvaluationRequest, List[PrescribedDrugItem], Dict[str, Any]] = Body(...),
+    patient_id: Optional[str] = Query(None),
+    age: Optional[int] = Query(None),
+    is_female: Optional[bool] = Query(None),
+    serum_creatinine_mg_dl: Optional[float] = Query(None),
+    serum_potassium_meq_l: Optional[float] = Query(None),
 ) -> DrugSafetyBlock:
     """Comprehensive pharmacology safety scan returning canonical SDUI Block 3."""
-    prescribed_drugs_dict = [single_drug.model_dump() for single_drug in prescribed_drugs]
+    req_dict = (
+        evaluation_payload.model_dump()
+        if hasattr(evaluation_payload, "model_dump")
+        else ({"prescribed_drugs": evaluation_payload} if isinstance(evaluation_payload, list) else dict(evaluation_payload))
+    )
+    effective_patient_id = patient_id or str(req_dict.get("patient_id", "PATIENT_LOCAL_01"))
+    effective_age = age if age is not None else int(req_dict.get("age", 50))
+    effective_is_female = is_female if is_female is not None else bool(req_dict.get("is_female", False))
+    effective_serum_creatinine = (
+        serum_creatinine_mg_dl if serum_creatinine_mg_dl is not None else float(req_dict.get("serum_creatinine_mg_dl", 1.0))
+    )
+    effective_serum_potassium = (
+        serum_potassium_meq_l if serum_potassium_meq_l is not None else float(req_dict.get("serum_potassium_meq_l", 4.2))
+    )
+    effective_genotypes = req_dict.get("patient_genotypes") or {}
+
+    raw_items = req_dict.get("prescribed_drugs")
+    if raw_items:
+        prescribed_drugs_dict = [d.model_dump() if hasattr(d, "model_dump") else dict(d) for d in raw_items]
+    elif req_dict.get("prescribed_atc_codes"):
+        prescribed_drugs_dict = [
+            {"atc_code": code, "inn_name": code, "single_dose_mg": 100.0, "daily_dose_mg": 100.0}
+            for code in req_dict["prescribed_atc_codes"]
+        ]
+    else:
+        prescribed_drugs_dict = []
 
     # 1. CKD-EPI eGFR
     renal_calculator = CKDEPI2021Calculator()
     calculated_egfr = renal_calculator.compute_egfr(
-        age=age,
-        is_female=is_female,
-        serum_creatinine_mg_dl=serum_creatinine_mg_dl,
+        age=effective_age,
+        is_female=effective_is_female,
+        serum_creatinine_mg_dl=effective_serum_creatinine,
     )
 
     # 2. CYP450 multi-way clearance & prodrug bioactivation
@@ -341,7 +335,7 @@ def evaluate_pharmacology_safety(
     qtc_evaluation_summary = qtc_calculator.evaluate_qtc(
         prescribed_drugs=prescribed_drugs_dict,
         auc_ratios=cyp_clearance_summary["auc_ratios"],
-        serum_potassium_meq_l=serum_potassium_meq_l,
+        serum_potassium_meq_l=effective_serum_potassium,
     )
 
     # 4. Triple Whammy acute kidney injury detector
@@ -355,44 +349,69 @@ def evaluate_pharmacology_safety(
     cpic_engine = CPICPharmacogenomicsEngine()
     pgx_alerts = cpic_engine.evaluate_genetics(
         prescribed_drugs=prescribed_drugs_dict,
-        patient_genotypes=patient_genotypes or {},
+        patient_genotypes=effective_genotypes,
     )
 
-    # Compile structured UI alerts
+    # Compile structured UI alerts and enriched interactions with frontend parity
     compiled_alerts: List[Dict[str, Any]] = []
+    enriched_interactions: List[Dict[str, Any]] = []
     for detected_interaction in cyp_clearance_summary["detected_interactions"]:
+        single_inter = dict(detected_interaction)
+        source_atc = single_inter.get("source_atc", "")
+        target_atc = single_inter.get("target_atc", "")
+        severity_val = single_inter.get("severity", SeverityLevel.LEVEL_1)
+        severity_num = int(severity_val) if hasattr(severity_val, "value") else int(severity_val)
+        mechanism_text = single_inter.get("mechanism", "")
+
+        single_inter["drug_a"] = source_atc
+        single_inter["drug_b"] = target_atc
+        single_inter["level"] = severity_num
+        single_inter["is_prodrug_bioactivation_block"] = (
+            "prodrug" in mechanism_text.lower() or "bioactivation" in mechanism_text.lower()
+        )
+        enriched_interactions.append(single_inter)
+
         compiled_alerts.append({
             "alert_type": "DRUG_INTERACTION",
-            "severity": detected_interaction["severity"],
-            "title": f"Interaction: {detected_interaction['source_atc']} + {detected_interaction['target_atc']}",
-            "description": detected_interaction["mechanism"],
-            "guideline": detected_interaction["management_guideline"],
+            "code": "DRUG_INTERACTION",
+            "severity": severity_num,
+            "title": f"Interaction: {source_atc} + {target_atc}",
+            "description": mechanism_text,
+            "message": f"Interaction: {source_atc} + {target_atc}: {mechanism_text}",
+            "guideline": single_inter.get("management_guideline", ""),
         })
 
     if triple_whammy_report["triple_whammy_detected"]:
         compiled_alerts.append({
             "alert_type": "TRIPLE_WHAMMY",
-            "severity": triple_whammy_report["severity_level"],
+            "code": "TRIPLE_WHAMMY",
+            "severity": int(triple_whammy_report["severity_level"]),
             "title": "Triple Whammy Nephrotoxicity Alert",
             "description": triple_whammy_report["clinical_warning"],
+            "message": triple_whammy_report["clinical_warning"],
             "guideline": "Discontinue NSAID and recalculate renal dosage.",
         })
 
     if qtc_evaluation_summary["qtc_prolongation_score"] >= 6.0:
         compiled_alerts.append({
             "alert_type": "QTC_PROLONGATION",
-            "severity": SeverityLevel.LEVEL_1,
+            "code": "QTC_PROLONGATION",
+            "severity": int(SeverityLevel.LEVEL_1),
             "title": "Severe QTc Prolongation Risk (Torsades de Pointes)",
             "description": f"Cumulative QTc score {qtc_evaluation_summary['qtc_prolongation_score']:.1f} exceeds safety threshold 6.0.",
+            "message": f"Cumulative QTc score {qtc_evaluation_summary['qtc_prolongation_score']:.1f} exceeds safety threshold 6.0.",
             "guideline": "Continuous ECG telemetry monitoring required.",
         })
 
     for pharmacogenomic_alert in pgx_alerts:
+        sev = int(SeverityLevel.LEVEL_1 if pharmacogenomic_alert.get("is_absolute_contraindication") else SeverityLevel.LEVEL_2)
         compiled_alerts.append({
             "alert_type": "PHARMACOGENOMICS",
-            "severity": SeverityLevel.LEVEL_1 if pharmacogenomic_alert.get("is_absolute_contraindication") else SeverityLevel.LEVEL_2,
+            "code": "PHARMACOGENOMICS",
+            "severity": sev,
             "title": f"CPIC Alert: {pharmacogenomic_alert.get('gene_symbol')}",
             "description": pharmacogenomic_alert.get("recommendation", ""),
+            "message": pharmacogenomic_alert.get("recommendation", ""),
             "guideline": "Select alternative agent as per CPIC guidelines.",
         })
 
@@ -404,8 +423,10 @@ def evaluate_pharmacology_safety(
     return DrugSafetyBlock(
         block_type="DrugSafetyBlock",
         component_type="DrugSafetyBlock",
-        interactions=cyp_clearance_summary["detected_interactions"],
+        interactions=enriched_interactions,
         cyp_clearance=cyp_clearance_map,
         alerts=compiled_alerts,
         egfr=round(calculated_egfr, 2),
+        qtc_tisdale_score=round(float(qtc_evaluation_summary["qtc_prolongation_score"]), 2),
+        triple_whammy_detected=bool(triple_whammy_report["triple_whammy_detected"]),
     )

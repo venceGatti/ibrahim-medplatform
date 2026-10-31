@@ -118,3 +118,35 @@ class SDUIMessageEnvelope(BaseModel):
 
 
 SDUIPayloadEnvelope = SDUIMessageEnvelope
+
+
+class HybridSearchRequest(BaseModel):
+    """Query parameters for combined phonetic and inverted lexical index search."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    query_text: str
+    limit: int = 10
+
+
+class SearchMatchEntry(BaseModel):
+    """Individual concept match descriptor returned from knowledge search."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    concept_id: str
+    title: str
+    match_score: float
+    source: str
+
+
+class HybridSearchResponse(BaseModel):
+    """Collection of ranked clinical concept search results."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    query: str
+    matches: List[SearchMatchEntry]
+
+
+class ExamEvaluationRequest(BaseModel):
+    """Assessment answer payload supporting MCQ, Hotspot, and stateful DAG scenarios."""
+    model_config = ConfigDict(frozen=True, extra="forbid")
+    item_type: str
+    item_data: Dict[str, Any]
+    user_selection: Any
+    fsrs_card_state: Optional[Dict[str, Any]] = None
