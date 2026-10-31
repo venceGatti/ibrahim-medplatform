@@ -123,8 +123,10 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
 
       <div className="grid grid-cols-1 gap-3 rounded-lg border border-slate-800 bg-slate-950 p-3 sm:grid-cols-3">
         <div>
-          <label className="block text-xs text-slate-400">Eta Paziente (anni)</label>
+          <label htmlFor="input-renal-age" className="block text-xs text-slate-400">Eta Paziente (anni)</label>
           <input
+            id="input-renal-age"
+            name="patient_age_years"
             type="number"
             min={18}
             max={115}
@@ -141,8 +143,10 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
           />
         </div>
         <div>
-          <label className="block text-xs text-slate-400">Creatinina Sierica (mg/dL)</label>
+          <label htmlFor="input-renal-creatinine" className="block text-xs text-slate-400">Creatinina Sierica (mg/dL)</label>
           <input
+            id="input-renal-creatinine"
+            name="serum_creatinine_mg_dl"
             type="number"
             step="0.1"
             min={0.2}

@@ -173,6 +173,7 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
         </label>
         <input
           id="symptom-search-field"
+          name="symptom_search"
           type="text"
           role="combobox"
           aria-haspopup="listbox"
