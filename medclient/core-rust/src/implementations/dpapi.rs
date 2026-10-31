@@ -14,6 +14,7 @@ impl WindowsDpapiVault {
         Self
     }
 
+    #[allow(unused_variables)]
     pub fn encrypt(&self, plaintext_bytes: &[u8]) -> Result<Vec<u8>, String> {
         #[cfg(windows)]
         unsafe {
@@ -57,6 +58,7 @@ impl WindowsDpapiVault {
         }
     }
 
+    #[allow(unused_variables)]
     pub fn decrypt(&self, ciphertext_bytes: &[u8]) -> Result<Vec<u8>, String> {
         #[cfg(windows)]
         unsafe {

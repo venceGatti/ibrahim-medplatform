@@ -290,8 +290,8 @@ mod tests {
 
         #[cfg(not(windows))]
         {
-            drop(dpapi_vault);
-            drop(secret_input);
+            let _ = dpapi_vault;
+            let _ = secret_input;
         }
     }
 
@@ -319,7 +319,7 @@ mod tests {
         assert!(memory_check.is_ok());
 
         let heal_check = lifecycle.verify_and_heal_sidecar();
-        assert_eq!(heal_check.unwrap(), false);
+        assert!(!heal_check.unwrap());
 
         let shutdown_outcome = lifecycle.shutdown_host();
         assert!(shutdown_outcome.is_ok());
