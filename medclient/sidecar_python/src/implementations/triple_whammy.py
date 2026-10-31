@@ -2,7 +2,7 @@
 from typing import List, Dict, Any
 from ..interfaces.pharmacology import ITripleWhammyDetector
 from ..base.pharmacology_models import SeverityLevel
-from .cyp450_engine import decompose_fdc_prescriptions
+from ..base.pharmacology_catalogs import decompose_fdc_prescriptions
 
 
 class TripleWhammyDetector(ITripleWhammyDetector):

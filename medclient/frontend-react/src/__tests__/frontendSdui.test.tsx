@@ -175,13 +175,13 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
         CYP2C19: 0.14,
         CYP1A2: 0.95,
       },
-      alerts: [{ code: 'BLACKBOX_INEFFICACY', severity: 1 as const }],
+      alerts: [{ code: 'BLACKBOX_INEFFICACY', severity: 1 as const, alert_type: 'DRUG_INTERACTION', description: 'prodrug', title: 'test', message: 'test', guideline: 'test' }],
       egfr: 64.5,
       triple_whammy_detected: true,
     };
     useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety });
 
-    render(<MedClientAppShell />);
+    act(() => { render(<MedClientAppShell />); });
 
     // Rule 8: All 4 views exist simultaneously in the DOM
     const sheetView = screen.getByTestId('dom-retained-view-clinical_sheet');

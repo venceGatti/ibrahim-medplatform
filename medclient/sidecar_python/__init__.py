@@ -1,4 +1,1 @@
-"""Bridge package to sidecar-python directory."""
-from pathlib import Path
-
-__path__ = [str(Path(__file__).resolve().parent.parent / "sidecar-python")]
+"""MedClient Sidecar Python root package."""

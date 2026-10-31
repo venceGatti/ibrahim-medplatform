@@ -81,9 +81,8 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
   const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);
 
   const hasBlackboxProdrugAlert = block.alerts.some(
-    (safetyAlert) => safetyAlert.code === 'BLACKBOX_INEFFICACY' || safetyAlert.severity === 1
+    (safetyAlert) => safetyAlert.code === "BLACKBOX_INEFFICACY" || safetyAlert.severity === 1 || (safetyAlert.alert_type === "DRUG_INTERACTION" && (safetyAlert.description || "").toLowerCase().includes("prodrug"))
   );
-
   return (
     <section
       className="space-y-5 rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-md"
