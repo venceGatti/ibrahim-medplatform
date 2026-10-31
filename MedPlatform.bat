@@ -31,3 +31,4 @@ start http://localhost:5173
 
 :: 6. Chiusura pulita della finestra del launcher
 exit
+
