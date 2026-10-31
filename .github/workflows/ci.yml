@@ -1,0 +1,73 @@
+name: MedPlatform CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  python-test:
+    name: Python Engine Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r medclient/sidecar-python/requirements.txt
+          pip install pytest pytest-asyncio polars pycryptodome httpx fastapi uvicorn
+
+      - name: Run MedFactory Tests
+        run: |
+          pytest medfactory/tests -v
+
+      - name: Run Python Sidecar Tests
+        run: |
+          pytest medclient/sidecar-python/tests -v
+
+  rust-test:
+    name: Rust Core Verification
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run Cargo Tests
+        run: |
+          cargo test --manifest-path medclient/core-rust/Cargo.toml --verbose
+
+  react-test:
+    name: Frontend React SDUI Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: medclient/frontend-react/package-lock.json
+
+      - name: Install Frontend Dependencies
+        working-directory: medclient/frontend-react
+        run: npm ci
+
+      - name: Build TypeScript & Vite
+        working-directory: medclient/frontend-react
+        run: npm run build
+
+      - name: Run Vitest Suite
+        working-directory: medclient/frontend-react
+        run: npx vitest run
