@@ -41,6 +41,62 @@ class FSRSScheduler(IFSRSScheduler):
     def __init__(self, weights: Optional[List[float]] = None) -> None:
         self.w = weights if weights is not None else DEFAULT_FSRS_WEIGHTS
 
+    def step(self, review_input: Any, card_state: Optional[Dict[str, Any]] = None) -> ReviewResultDict:
+        """Compatibility adapter executing review_card from an FSRSReviewInput model or dict."""
+        if hasattr(review_input, "rating"):
+            grade_val = int(review_input.rating)
+            review_time_val = getattr(review_input, "review_time", None)
+            target_exam_val = getattr(review_input, "target_exam_date", None)
+            desired_ret_val = getattr(review_input, "desired_retention", 0.90)
+            concept_uid_val = getattr(review_input, "concept_uid", "concept_card")
+            card_dict = card_state or {
+                "concept_uid": concept_uid_val,
+                "stability": getattr(review_input, "stability", 2.0) if hasattr(review_input, "stability") else 2.0,
+                "difficulty": getattr(review_input, "difficulty", 5.0) if hasattr(review_input, "difficulty") else 5.0,
+                "elapsed_days": getattr(review_input, "elapsed_days", 0.0) if hasattr(review_input, "elapsed_days") else 0.0,
+                "reps": getattr(review_input, "reps", 0) if hasattr(review_input, "reps") else 0,
+                "lapses": getattr(review_input, "lapses", 0) if hasattr(review_input, "lapses") else 0,
+            }
+        elif isinstance(review_input, dict):
+            grade_val = int(review_input.get("rating", 3))
+            review_time_val = review_input.get("review_time")
+            target_exam_val = review_input.get("target_exam_date")
+            desired_ret_val = float(review_input.get("desired_retention", 0.90))
+            card_dict = card_state or dict(review_input)
+        else:
+            grade_val = 3
+            review_time_val = None
+            target_exam_val = None
+            desired_ret_val = 0.90
+            card_dict = card_state or {}
+
+        return self.review_card(
+            card_state=card_dict,
+            rating=grade_val,
+            review_time=review_time_val,
+            desired_retention=desired_ret_val,
+            target_exam_date=target_exam_val,
+        )
+
+    def step(self, review_input: FSRSReviewInput) -> ReviewResultDict:
+        """Compatibility adapter executing review_card from an FSRSReviewInput model."""
+        card_instance = FSRSCardBase(
+            concept_uid="concept_card",
+            stability=review_input.stability,
+            difficulty=review_input.difficulty,
+            elapsed_days=review_input.elapsed_days,
+            scheduled_days=0.0,
+            reps=review_input.reps,
+            lapses=review_input.lapses,
+            state=FSRSStateEnum.REVIEW,
+            last_review=datetime.now(timezone.utc),
+            due_date=datetime.now(timezone.utc),
+            retrievability=1.0,
+            criticality_weight=1.0,
+        )
+        grade_enum = FSRSReviewGrade(review_input.rating)
+        return self.review_card(card_instance, grade_enum)
+
     def calculate_retrievability(self, elapsed_days: float, stability: float) -> float:
         """Calculate memory retrievability probability R(t, S)."""
         if stability <= 0.0:

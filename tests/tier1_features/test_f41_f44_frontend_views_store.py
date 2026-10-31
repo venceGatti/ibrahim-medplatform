@@ -7,7 +7,12 @@ Tier 1: Feature Coverage Tests for Frontend SDUI Features 41 through 44.
 """
 
 import pytest
+from pathlib import Path
+from starlette.testclient import TestClient
+from medclient.sidecar_python.src.api.server import create_app
+from medclient.sidecar_python.src.implementations.sdui_emitter import SDUISerializer
 from tests.conftest import (
+    PROJECT_ROOT,
     ClinicalSheetBlockContract,
     SymptomMatcherBlockContract,
 )
@@ -17,14 +22,17 @@ from tests.conftest import (
 @pytest.mark.tier1
 def test_f41_react_root_element_presence():
     """Verify HTML template mounts single root container div."""
-    index_html = '<!DOCTYPE html><html><body><div id="root"></div></body></html>'
+    index_html_path = PROJECT_ROOT / "medclient" / "frontend-react" / "index.html"
+    assert index_html_path.exists()
+    index_html = index_html_path.read_text(encoding="utf-8")
     assert '<div id="root"></div>' in index_html
 
 
 @pytest.mark.tier1
 def test_f41_vite_entrypoint_script_tag():
     """Verify script module points to main application entrypoint."""
-    index_html = '<script type="module" src="/src/main.tsx"></script>'
+    index_html_path = PROJECT_ROOT / "medclient" / "frontend-react" / "index.html"
+    index_html = index_html_path.read_text(encoding="utf-8")
     assert 'type="module"' in index_html
     assert 'src="/src/main.tsx"' in index_html
 
@@ -32,9 +40,9 @@ def test_f41_vite_entrypoint_script_tag():
 @pytest.mark.tier1
 def test_f41_tailwind_utility_class_inclusion():
     """Verify UI components use standard TailwindCSS utilities."""
-    button_classes = "px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700"
-    assert "bg-blue-600" in button_classes
-    assert "rounded" in button_classes
+    index_html_path = PROJECT_ROOT / "medclient" / "frontend-react" / "index.html"
+    index_html = index_html_path.read_text(encoding="utf-8")
+    assert "bg-slate-950" in index_html or "text-slate-100" in index_html
 
 
 @pytest.mark.tier1
@@ -48,9 +56,13 @@ def test_f41_error_boundary_fallback_contract():
 @pytest.mark.tier1
 def test_f41_spa_active_view_navigation():
     """Verify client-side navigation switches active views without full page reload."""
-    views = ["clinical_sheet", "symptom_matcher", "drug_safety", "exam_simulator"]
-    current_view = views[1]
-    assert current_view == "symptom_matcher"
+    token = "test-token-f41-nav"
+    app = create_app(ipc_token=token)
+    client = TestClient(app)
+    response = client.get("/api/v3/sheets/SHEET_TEST_01", headers={"X-Tauri-IPC-Secret": token})
+    assert response.status_code == 200
+    sheet = response.json()
+    assert sheet["block_type"] == "ClinicalSheetBlock"
 
 
 # ---------------------------------------------------------------------------
@@ -59,14 +71,14 @@ def test_f41_spa_active_view_navigation():
 @pytest.mark.tier1
 def test_f42_zustand_tab_persistence_across_navigation():
     """Verify switching tabs retains previously selected tab and scroll state (Rule 8)."""
-    store_state = {
-        "active_tab": "drug_safety",
-        "tab_scroll_positions": {"clinical_sheet": 240, "drug_safety": 0},
-        "search_input": "Clopidogrel"
-    }
-    # Verify switching to clinical_sheet and back
-    assert store_state["tab_scroll_positions"]["clinical_sheet"] == 240
-    assert store_state["search_input"] == "Clopidogrel"
+    token = "test-token-f42-state"
+    app = create_app(ipc_token=token)
+    client = TestClient(app)
+    response = client.get("/agent/state", headers={"X-Tauri-IPC-Secret": token})
+    assert response.status_code == 200
+    state_payload = response.json()
+    assert "active_slot" in state_payload
+    assert "active_db_path" in state_payload
 
 
 @pytest.mark.tier1
@@ -123,14 +135,14 @@ def test_f42_zustand_subscriber_notification():
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f43_clinical_sheet_pydantic_contract():
-    """Verify ClinicalSheetBlock sdui_payload satisfies schema contract."""
-    sdui_payload = {
-        "block_type": "ClinicalSheetBlock",
-        "sheet_id": "SHEET_STEMI_01",
-        "title": "ST-Elevation Myocardial Infarction",
-        "content_markdown": "# Clinical Presentation\nSevere retrosternal pain.",
-        "callouts": [{"severity": "CRITICAL", "message": "Immediate catheterization laboratory activation."}]
-    }
+    """Verify ClinicalSheetBlock payload produced by SDUISerializer satisfies schema contract."""
+    serializer = SDUISerializer()
+    sdui_payload = serializer.build_clinical_sheet_block(
+        sheet_id="SHEET_STEMI_01",
+        title="ST-Elevation Myocardial Infarction",
+        content_markdown="# Clinical Presentation\nSevere retrosternal pain.",
+        callouts=[{"id": "callout_stemi_01", "severity": "CRITICAL", "body_markdown": "Immediate catheterization laboratory activation."}],
+    )
     block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert block.block_type == "ClinicalSheetBlock"
     assert block.sheet_id == "SHEET_STEMI_01"
@@ -161,13 +173,13 @@ def test_f43_clinical_sheet_callout_severity_classes():
 @pytest.mark.tier1
 def test_f43_clinical_sheet_empty_callouts_allowed():
     """Verify sheets with zero callouts remain valid."""
-    sdui_payload = {
-        "block_type": "ClinicalSheetBlock",
-        "sheet_id": "SHEET_ANATOMY_01",
-        "title": "Coronary Anatomy",
-        "content_markdown": "Normal anatomy of LAD and RCA.",
-        "callouts": []
-    }
+    serializer = SDUISerializer()
+    sdui_payload = serializer.build_clinical_sheet_block(
+        sheet_id="SHEET_ANATOMY_01",
+        title="Coronary Anatomy",
+        content_markdown="Normal anatomy of LAD and RCA.",
+        callouts=[],
+    )
     block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert len(block.callouts) == 0
 
@@ -175,13 +187,13 @@ def test_f43_clinical_sheet_empty_callouts_allowed():
 @pytest.mark.tier1
 def test_f43_clinical_sheet_title_non_empty():
     """Verify title is non-empty string."""
-    sdui_payload = {
-        "block_type": "ClinicalSheetBlock",
-        "sheet_id": "SHEET_01",
-        "title": "Valid Title",
-        "content_markdown": "Content",
-        "callouts": []
-    }
+    serializer = SDUISerializer()
+    sdui_payload = serializer.build_clinical_sheet_block(
+        sheet_id="SHEET_01",
+        title="Valid Title",
+        content_markdown="Content",
+        callouts=[],
+    )
     block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert len(block.title) > 0
 
@@ -191,15 +203,15 @@ def test_f43_clinical_sheet_title_non_empty():
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f44_symptom_matcher_pydantic_contract():
-    """Verify SymptomMatcherBlock sdui_payload satisfies schema contract."""
-    sdui_payload = {
-        "block_type": "SymptomMatcherBlock",
-        "differential_candidates": [
+    """Verify SymptomMatcherBlock payload produced by SDUISerializer satisfies schema contract."""
+    serializer = SDUISerializer()
+    sdui_payload = serializer.build_symptom_matcher_block(
+        differential_candidates=[
             {"disease_id": "D1", "name": "STEMI", "probability": 0.85}
         ],
-        "selected_symptoms": ["HP:0001635"],
-        "nbq": {"question_id": "Q_ECG", "text": "Is there ST elevation?"}
-    }
+        selected_symptoms=["HP:0001635"],
+        nbq={"question_id": "Q_ECG", "text": "Is there ST elevation?"},
+    )
     block = SymptomMatcherBlockContract.model_validate(sdui_payload)
     assert block.block_type == "SymptomMatcherBlock"
     assert len(block.differential_candidates) == 1

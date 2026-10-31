@@ -1,6 +1,6 @@
 """Pydantic V2 models for Agentic API endpoints."""
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, ConfigDict, model_validator, computed_field
+from pydantic import BaseModel, Field, ConfigDict, model_validator, model_serializer
 
 
 class AgentHealthResponse(BaseModel):
@@ -36,13 +36,13 @@ class AgentExecuteRequest(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def populate_action_parameters(cls, input_data: Any) -> Any:
-        if isinstance(input_data, dict):
-            if "payload" in input_data and "action_parameters" not in input_data:
-                normalized = dict(input_data)
-                normalized["action_parameters"] = normalized.pop("payload")
-                return normalized
-        return input_data
+    def populate_action_parameters(cls, action_parameters: Any) -> Any:
+        if isinstance(action_parameters, dict):
+            if "payload" in action_parameters and "action_parameters" not in action_parameters:
+                normalized_map = dict(action_parameters)
+                normalized_map["action_parameters"] = normalized_map.pop("payload")
+                return normalized_map
+        return action_parameters
 
 
 class AgentExecuteResponse(BaseModel):
@@ -57,8 +57,11 @@ class AgentExecuteResponse(BaseModel):
     )
     error_message: Optional[str] = None
 
-    @computed_field
-    @property
-    def result(self) -> Dict[str, Any]:
-        """Backward compatibility alias for execution outcome payload."""
-        return self.execution_outcome
+    @model_serializer(mode="wrap")
+    def serialize_outcome_envelope(self, serializer_handler: Any) -> Dict[str, Any]:
+        serialized_envelope = serializer_handler(self)
+        if "execution_outcome" in serialized_envelope:
+            serialized_envelope["result"] = serialized_envelope["execution_outcome"]
+        return serialized_envelope
+
+

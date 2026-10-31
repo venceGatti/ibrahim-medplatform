@@ -1,14 +1,29 @@
 import { create } from 'zustand';
-import type {
-  ActiveTabIdentifier,
-  IMedClientStoreState,
-  RenalPatientParameters,
-} from '../interfaces/engineContracts';
+import type { ActiveTabIdentifier, IMedClientStoreState, RenalPatientParameters } from '../interfaces/engineContracts';
 import type {
   CanonicalBlockType,
+  ClinicalSheetBlock,
+  DrugSafetyBlock,
+  EmergencyTriageTelemetry,
+  ExamSimulatorBlock,
   FsrsRatingGrade,
+  SymptomMatcherBlock,
+  SymptomMatcherOutput,
   SymptomPolarity,
 } from '../interfaces/sduiContracts';
+
+import { resolveSidecarIpcConfig, SidecarIpcClient } from './sidecarIpcClient';
+
+export const SIDECAR_IPC_ENDPOINTS = {
+  CLINICAL_SHEET: '/api/v3/sheets/{sheet_id}',
+  ENGINE_EVALUATE: '/api/v3/engine/evaluate',
+  PHARMA_EVALUATE: '/api/v3/pharma/evaluate',
+  EXAM_EVALUATE: '/api/v3/exam/evaluate',
+  AGENT_HEALTH: '/agent/health',
+  AGENT_EXECUTE: '/agent/execute',
+} as const;
+
+export const sidecarIpcClient = new SidecarIpcClient(resolveSidecarIpcConfig());
 
 const STORAGE_KEY_MEDCLIENT = 'medclient_persistent_state_v1';
 
@@ -33,15 +48,9 @@ export function computeCkdEpi2021Egfr(
 }
 
 function mapTabToCanonicalBlock(tabId: ActiveTabIdentifier): CanonicalBlockType {
-  if (tabId === 'symptom_matcher') {
-    return 'SymptomMatcherBlock';
-  }
-  if (tabId === 'drug_safety') {
-    return 'DrugSafetyBlock';
-  }
-  if (tabId === 'exam_simulator') {
-    return 'ExamSimulatorBlock';
-  }
+  if (tabId === 'symptom_matcher') return 'SymptomMatcherBlock';
+  if (tabId === 'drug_safety') return 'DrugSafetyBlock';
+  if (tabId === 'exam_simulator') return 'ExamSimulatorBlock';
   return 'ClinicalSheetBlock';
 }
 
@@ -64,18 +73,10 @@ const DEFAULT_RENAL_PARAMETERS: RenalPatientParameters = {
 const DEFAULT_PERSISTED_SLICE: PersistedSlice = {
   activeTab: 'clinical_sheet',
   searchQuery: '',
-  selectedSymptoms: {
-    'HP:0001635': 'PRESENT',
-    'HP:0002094': 'PRESENT',
-  },
+  selectedSymptoms: { 'HP:0001635': 'PRESENT', 'HP:0002094': 'PRESENT' },
   activeMedications: ['B01AC04', 'A02BC01'],
   renalParameters: DEFAULT_RENAL_PARAMETERS,
-  tabScrollOffsets: {
-    clinical_sheet: 0,
-    symptom_matcher: 0,
-    drug_safety: 0,
-    exam_simulator: 0,
-  },
+  tabScrollOffsets: { clinical_sheet: 0, symptom_matcher: 0, drug_safety: 0, exam_simulator: 0 },
 };
 
 export function loadPersistedMedClientState(): PersistedSlice {
@@ -143,6 +144,205 @@ export const useMedClientStore = create<IMedClientStoreState>((set, get) => ({
   tabScrollOffsets: initialSlice.tabScrollOffsets,
   ipcConnectionStatus: 'ONLINE',
   activeCanonicalView: mapTabToCanonicalBlock(initialSlice.activeTab),
+  liveClinicalSheet: null,
+  liveSymptomMatcher: null,
+  liveDrugSafety: null,
+  liveExamBlock: null,
+  isSidecarLoading: false,
+  sidecarErrorMessage: null,
+
+  fetchClinicalSheet: async (sheetId = 'SHEET_STEMI_01') => {
+    set({ isSidecarLoading: true, sidecarErrorMessage: null });
+    try {
+      const sheet = await sidecarIpcClient.getClinicalSheet<ClinicalSheetBlock>(sheetId);
+      set({ liveClinicalSheet: sheet, isSidecarLoading: false, ipcConnectionStatus: 'ONLINE' });
+    } catch (err) {
+      set({
+        liveClinicalSheet: null,
+        sidecarErrorMessage: err instanceof Error ? err.message : String(err),
+        isSidecarLoading: false,
+        ipcConnectionStatus: 'OFFLINE_LOCAL',
+      });
+    }
+  },
+
+  evaluateDifferentialDiagnosis: async () => {
+    const rawSymptoms = get().selectedSymptoms;
+    const findings = Object.entries(rawSymptoms).map(([hpoId, state]) => ({
+      hpo_id: hpoId,
+      state,
+      is_pathognomonic: false,
+    }));
+    if (findings.length === 0) {
+      set({ liveSymptomMatcher: null, isSidecarLoading: false });
+      return;
+    }
+
+    set({ isSidecarLoading: true, sidecarErrorMessage: null });
+    try {
+      const payload = {
+        session_id: `session_${Date.now()}`,
+        vitals: {
+          heart_rate_bpm: 80.0,
+          systolic_bp_mmhg: 120.0,
+          respiratory_rate_bpm: 16.0,
+          spo2_percent: 98.0,
+          temperature_celsius: 36.6,
+          avpu_scale: 'A',
+          gcs_score: 15,
+          supplemental_o2: false,
+          hypercapnic_risk: false,
+        },
+        findings,
+      };
+      const output = await sidecarIpcClient.evaluateDiagnostic<SymptomMatcherOutput>(payload);
+      const rawRedFlags = (output.red_flags ?? {}) as Record<string, unknown>;
+      const triageTelemetry: EmergencyTriageTelemetry = {
+        alert_level: (rawRedFlags.alert_level as 'NOMINAL' | 'YELLOW_ATTENTION' | 'RED_CRITICAL') ?? 'NOMINAL',
+        shock_index: typeof rawRedFlags.shock_index === 'number' ? rawRedFlags.shock_index : 0.0,
+        qsofa_score: typeof rawRedFlags.qsofa_score === 'number' ? rawRedFlags.qsofa_score : 0,
+        news2_score: typeof rawRedFlags.news2_score === 'number' ? rawRedFlags.news2_score : 0,
+        trigger_reason: Array.isArray(rawRedFlags.critical_triggers)
+          ? rawRedFlags.critical_triggers.join('; ')
+          : undefined,
+      };
+
+      const updatedBlock: SymptomMatcherBlock = {
+        block_type: 'SymptomMatcherBlock',
+        differential_candidates: output.differential_diagnosis.map((candidateEntry) => {
+          const anyCand = candidateEntry as unknown as Record<string, unknown>;
+          const diseaseId = String(anyCand.icd10_code ?? anyCand.disease_id ?? anyCand.name ?? anyCand.disease_name ?? 'UNKNOWN');
+          const name = String(anyCand.name ?? anyCand.disease_name ?? diseaseId);
+          const rawProb = typeof anyCand.probability === 'number'
+            ? anyCand.probability
+            : typeof anyCand.posterior_probability === 'number'
+              ? anyCand.posterior_probability
+              : 0.5;
+          const severity = (rawProb > 0.7 ? 'CRITICAL' : rawProb > 0.4 ? 'HIGH' : 'MODERATE') as 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+          return {
+            disease_id: diseaseId,
+            name,
+            probability: rawProb,
+            icd10_code: anyCand.icd10_code ? String(anyCand.icd10_code) : undefined,
+            severity,
+          };
+        }),
+        selected_symptoms: Object.keys(rawSymptoms),
+        nbq: output.nbq ?? {
+          question_id: 'NBQ_01',
+          text: 'Presenza di dispnea ingravescente a riposo?',
+          hpo_id: 'HP:0002094',
+        },
+        triage_telemetry: triageTelemetry,
+      };
+      set({ liveSymptomMatcher: updatedBlock, isSidecarLoading: false, ipcConnectionStatus: 'ONLINE' });
+    } catch (err) {
+      set({
+        liveSymptomMatcher: null,
+        sidecarErrorMessage: err instanceof Error ? err.message : String(err),
+        isSidecarLoading: false,
+        ipcConnectionStatus: 'OFFLINE_LOCAL',
+      });
+    }
+  },
+
+  evaluatePharmacologySafety: async () => {
+    const activeMedications = get().activeMedications;
+    if (activeMedications.length === 0) {
+      set({ liveDrugSafety: null, isSidecarLoading: false });
+      return;
+    }
+
+    set({ isSidecarLoading: true, sidecarErrorMessage: null });
+    try {
+      const renal = get().renalParameters;
+      const drugCatalog: Record<string, { inn: string; single: number; daily: number; prodrug: boolean; fm?: Record<string, number> }> = {
+        B01AC04: { inn: 'Clopidogrel', single: 75.0, daily: 75.0, prodrug: true, fm: { CYP2C19: 0.85 } },
+        A02BC01: { inn: 'Omeprazole', single: 20.0, daily: 20.0, prodrug: false, fm: { CYP2C19: 0.7 } },
+        C09CA04: { inn: 'Irbesartan', single: 150.0, daily: 150.0, prodrug: false },
+        C03AA03: { inn: 'Hydrochlorothiazide', single: 12.5, daily: 12.5, prodrug: false },
+        M01AE01: { inn: 'Ibuprofen', single: 400.0, daily: 1200.0, prodrug: false },
+      };
+
+      const prescribedDrugs = activeMedications.map((atc) => {
+        const info = drugCatalog[atc] ?? { inn: atc, single: 50.0, daily: 100.0, prodrug: false };
+        return {
+          atc_code: atc,
+          inn_name: info.inn,
+          single_dose_mg: info.single,
+          daily_dose_mg: info.daily,
+          route: 'oral',
+          is_prodrug: info.prodrug,
+          is_narrow_therapeutic_index: false,
+          qtc_base_risk: 0.0,
+          is_ras_blocker: atc === 'C09CA04',
+          is_diuretic: atc === 'C03AA03',
+          is_nsaid: atc === 'M01AE01',
+          fm_cyp: info.fm ?? {},
+        };
+      });
+
+      const queryParams = {
+        patient_id: 'PATIENT_LOCAL_01',
+        age: renal.ageYears,
+        is_female: renal.isFemale,
+        serum_creatinine_mg_dl: renal.serumCreatinineMgDl,
+        serum_potassium_meq_l: 4.2,
+      };
+
+      const block = await sidecarIpcClient.evaluatePharmacology<DrugSafetyBlock>(
+        { prescribed_drugs: prescribedDrugs },
+        queryParams
+      );
+      set({ liveDrugSafety: block, isSidecarLoading: false, ipcConnectionStatus: 'ONLINE' });
+    } catch (err) {
+      set({
+        liveDrugSafety: null,
+        sidecarErrorMessage: err instanceof Error ? err.message : String(err),
+        isSidecarLoading: false,
+        ipcConnectionStatus: 'OFFLINE_LOCAL',
+      });
+    }
+  },
+
+  submitExamEvaluation: async (itemType: string, userSelection: unknown) => {
+    set({ isSidecarLoading: true, sidecarErrorMessage: null });
+    try {
+      const payload = {
+        item_type: itemType,
+        item_data: {
+          question_id: 'Q_CARDIO_01',
+          stem: 'Quale gastroprotettore e preferibile associare alla DAPT con Clopidogrel per preservare la funzione CYP2C19?',
+          options: [
+            'Omeprazolo 40 mg',
+            'Pantoprazolo 20 mg',
+            'Esomeprazolo 40 mg',
+            'Fluconazolo 200 mg',
+          ],
+          correct_index: 1,
+          allowed_transitions: { ACT_FLUIDS: 'STEP_02' },
+          target_polygons: [
+            [
+              [0.1, 0.1],
+              [0.9, 0.1],
+              [0.5, 0.9],
+            ],
+          ],
+        },
+        user_selection: userSelection,
+        fsrs_card_state: { stability: 6.4, difficulty: 4.1, elapsed_days: 1.0, reps: 4, lapses: 0 },
+      };
+      const examBlock = await sidecarIpcClient.evaluateExam<ExamSimulatorBlock>(payload);
+      set({ liveExamBlock: examBlock, isSidecarLoading: false, ipcConnectionStatus: 'ONLINE' });
+    } catch (err) {
+      set({
+        liveExamBlock: null,
+        sidecarErrorMessage: err instanceof Error ? err.message : String(err),
+        isSidecarLoading: false,
+        ipcConnectionStatus: 'OFFLINE_LOCAL',
+      });
+    }
+  },
 
   setActiveTab: (targetTab: ActiveTabIdentifier) => {
     set({

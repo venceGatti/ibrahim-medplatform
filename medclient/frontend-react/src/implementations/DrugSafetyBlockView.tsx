@@ -75,7 +75,7 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
   const updateRenalParameters = useMedClientStore((state) => state.updateRenalParameters);
   const activeMedications = useMedClientStore((state) => state.activeMedications);
 
-  const displayedEgfr = block.egfr ?? renalParameters.calculatedEgfr;
+  const displayedEgfr = renalParameters.calculatedEgfr ?? block.egfr;
   const egfrTheme = resolveEgfrBadgeTheme(displayedEgfr);
   const egfrScaledPercentage = Math.min(100, Math.max(0, Math.round((displayedEgfr / 120) * 100)));
   const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);
@@ -294,22 +294,32 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
             Nessuna interazione clinicamente significativa rilevata nel piano terapeutico.
           </p>
         ) : (
-          block.interactions.map((interaction, idx) => (
-            <div
-              key={`${interaction.drug_a}-${interaction.drug_b}-${idx}`}
-              className="flex items-center justify-between rounded border border-slate-800 bg-slate-950 p-3 text-xs"
-            >
-              <div>
-                <span className="font-bold text-white">
-                  {interaction.drug_a} + {interaction.drug_b}
+          block.interactions.map((interactionItem, idx) => {
+            const anyItem = interactionItem as unknown as Record<string, unknown>;
+            const drugA = String(anyItem.drug_a || anyItem.source_atc || 'Farmaco A');
+            const drugB = String(anyItem.drug_b || anyItem.target_atc || 'Farmaco B');
+            const rawLevel = Number(anyItem.level || anyItem.severity || 1);
+            const levelVal = (rawLevel >= 1 && rawLevel <= 4 ? rawLevel : 1) as 1 | 2 | 3 | 4;
+            const mechanismText = String(
+              anyItem.mechanism || anyItem.clinical_consequence || 'Interazione identificata'
+            );
+            return (
+              <div
+                key={`${drugA}-${drugB}-${idx}`}
+                className="flex items-center justify-between rounded border border-slate-800 bg-slate-950 p-3 text-xs"
+              >
+                <div>
+                  <span className="font-bold text-white">
+                    {drugA} + {drugB}
+                  </span>
+                  <p className="text-slate-400">{mechanismText}</p>
+                </div>
+                <span className="rounded bg-red-900/70 px-2.5 py-1 font-bold text-red-200">
+                  Level {levelVal}: {resolveInteractionSeverityLabel(levelVal)}
                 </span>
-                <p className="text-slate-400">{interaction.mechanism}</p>
               </div>
-              <span className="rounded bg-red-900/70 px-2.5 py-1 font-bold text-red-200">
-                Level {interaction.level}: {resolveInteractionSeverityLabel(interaction.level)}
-              </span>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </section>

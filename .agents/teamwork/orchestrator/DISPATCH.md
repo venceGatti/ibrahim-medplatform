@@ -64,3 +64,39 @@ L'utente richiede l'espansione e strutturazione piramidale dell'organizzazione m
    - Verificare che ogni agente costruttore rispetti il capitolato, ma sostituendo tassativamente i punti deboli e le falle dell'SRS con le soluzioni migliorative formalizzate in `.agents/teamwork/critic_survey_1/analysis.md`, `.agents/teamwork/explorer_audit_1/code_audit.md` e `.agents/teamwork/AUDIT_AND_ASSUMPTIONS.md`.
 5. Divisioni Parallele di Scrittura, Revisione Continua e Refactoring:
    - Mantenere e scalare agenti dedicati per la scrittura del codice, la revisione riga per riga (zero-mock, 300-450 righe, `interfaces/base/implementations`, dependency pinning) e il bug-hunting.
+
+
+## 2026-10-31T17:33:57Z
+Delega più agenti 10 o più e separali in più ruoli, incluso quello di coordinatore, di analisi critica, di caccia agli errori, logiche mancanti, strutture errate, concetti mancanti da chiedere all'utente e idee di questo genere mancanti e non analizzate, oppure se il codice scritto non è del tutto corretto o non conforme alle richieste. Piattaforma medica ibrida asimmetrica per la produzione composta da MedFactory (build-time con GPU per estrazione e impacchettamento archivi .medpack) e MedClient (run-time su CPU senza GPU per consultazione diagnostica, sicurezza farmacologica ed esecuzione SDUI).
+
+Working directory: c:\Users\vence\Downloads\projects\ibrahim\.agents\teamwork\orchestrator/
+Project root: c:\Users\vence\Downloads\projects\ibrahim
+Reference request file: c:\Users\vence\Downloads\projects\ibrahim\.agents\teamwork\ORIGINAL_REQUEST.md
+
+Follow-up direttiva prioritaria dell'utente:
+Continua e ricorda di implementare un agente che sorveglia e monitora che il codice sia coeso in tutte le sue parti, quindi verifica che tipo se un metodo richiede un qualche valore in input la funzione che lo richiama lo rispetti, oppure se il server richiede che il file o la richiesta da parte del client sia in un certo modo verifica che venga realmente rispettata ambo i lati, e verifica che il piano architetturale e l'analisi dei punti critici del progetto vengano analizzati e seguiti, corretti e usati la nuova implementazione, in aggiunta aggiungi anche un altro agente che ogni tanto verifica che effettivamente nel file architetturale da 6600 righee non ci siano più logiche manacati o punti deboli o errori o mancate definizioni o segmenti che rischiano di portare ad allucinazioni l'agente a causa di specifiche ambigue e non definiteed altro, poi ogni tanto che controlla che non ci sia più nessun errore nel file e che siano stat tutti più volte risolti e convalidati,(questa operazione deve essere eseguita ogni tantum quando finisce il primo compito, passa a controllare che effettivamente nella passata precedente non aveva dimenticato nulla e che aveva scovato tutti gli errori altrimenti li segnala e li aggiunge in coda al file) poi verifica che tutti gli agenti del team stiano seguendo e rispettanto le implementazioni richieste e dovute e volte dal megafile da 6600 ma ache i punti deboli e fallaci vengano sostituiti e corretti con le implementazoni suggerite dall'agente nel suo file di analisicurativa, e molti altri agenti che si occupano di revisione costante, correzione, supervizione, aggiornamento e correzione, analisi, e moltissimi altri per scrittura del codice ecc... deve essere come letteralmente una aziendo di altissimo livello/multinazionale, come google che ha persone /agenti specializzai per qualsiasi cosa che eseguino il lavoro come una sorta di catena prodruttrice piramidale.
+
+Contesto di riferimento del repository:
+- SRS Architettura Completa: SRS_MedClient_Architettura_Completa.md (6600+ righe)
+- Audit & Assumptions: .agents/teamwork/AUDIT_AND_ASSUMPTIONS.md
+- Critic Analysis: .agents/teamwork/critic_survey_1/analysis.md
+- Code Audit: .agents/teamwork/explorer_audit_1/code_audit.md
+- MedPlatform Launcher unico: MedPlatform.bat
+- Microservizi: medclient/sidecar-python (FastAPI), medclient/core-rust (Tauri), medclient/frontend-react (React 19 SDUI), medfactory (Packager Zstd Ed25519)
+
+Riprendi l'orchestrazione dal piano corrente (.agents/teamwork/orchestrator/progress.md), guida la piramide multi-agente alla piena conformità di tutti i milestone e chiudi il ciclo con successo formale.
+
+
+## 2026-10-31T17:41:35Z
+DIRETTIVA CRITICA DALL'UTENTE (BLOCCANTE - PRIORITÀ MASSIMA):
+L'utente ha riscontrato che il programma attualmente ha il backend (FastAPI Sidecar Python su http://127.0.0.1:8765) COMPLETAMENTE SCOLLEGATO dal frontend React SDUI (in MedClientAppShell.tsx e useMedClientStore.ts vengono mostrati solo mock/stati di default cablati DEFAULT_CLINICAL_SHEET, DEFAULT_SYMPTOM_MATCHER, DEFAULT_DRUG_SAFETY, DEFAULT_EXAM_BLOCK anziché chiamare gli endpoint reali /api/v3/engine/evaluate, /api/v3/pharma/evaluate, /api/v3/sheets/{sheet_id}, /api/v3/exam/evaluate).
+
+Inoltre l'utente ordina formalmente:
+1. Delegare una task force parallela per:
+   - Collegare REALMENTE e IMMEDIATAMENTE tutte le chiamate fetch del frontend al backend via SidecarIpcClient (ROA-23 con header X-Tauri-IPC-Secret e fallback resiliente).
+   - Implementare/orientare l'Agente Cohesion & Contract Sentinel che verifica la corrispondenza delle firme di tutti i metodi e dei contratti client/server.
+   - Implementare/orientare l'Agente SRS Multi-Pass Curator che analizza ricorsivamente il megafile SRS da 6600+ righe, rileva buchi logici, specifiche ambigue e allucinazioni, e appende le correzioni convalidate in coda al file.
+   - Implementare/orientare l'Agente Curative Compliance Enforcer che garantisce che le soluzioni migliorative di critic_survey_1/analysis.md e code_audit.md siano applicate in produzione.
+2. Niente stub, niente dati statici fittizi nel flusso reale: il frontend deve interrogare attivamente il sidecar locale su 127.0.0.1:8765 e aggiornarsi deterministicamente.
+
+Aggiorna immediatamente il piano operativo dell'orchestrazione, assegna le istruzioni esecutive al worker/squadre di sviluppo e notifica lo stato di avanzamento.

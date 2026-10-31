@@ -1,4 +1,4 @@
-# AGENTS.md - MedPlatform Autonomous Agent Directives
+# AGENTS.md - Master Autonomous Agent Directives
 
 Welcome to **MedPlatform** (`ibrahim-medplatform`). This document provides formal directives and instructions for autonomous AI agents (including Google Labs Jules, Antigravity, and CI agents) operating on this repository.
 
@@ -14,11 +14,19 @@ MedPlatform is an offline-first, high-performance medical consultation and clini
 
 All modifications MUST adhere to these non-negotiable rules:
 1. **Zero-Mock Policy**: Absolutely NO synthetic placeholder returns (`return null`, `return {}`, empty stubs), no mock frameworks in production flows, and no bypassing exceptions.
-2. **Micro-File Modularization**: Keep source code files under 300–400 lines. Structure modules into `interfaces/`, `base/`, and `implementations/`.
+2. **Micro-File Modularization**: Keep source code files under 300–350 lines. Structure modules into `interfaces/`, `base/`, and `implementations/`.
 3. **Strict Domain Semantics**: Avoid generic identifiers (`data`, `obj`, `item`, `val`, `res`). Use explicit domain-specific naming (`clinicalSafetyAlert`, `symptomEntity`, `patientBiomarker`).
 4. **Offline Resilience**: All clinical algorithms and validation routines MUST execute 100% locally without external cloud dependencies.
+5. **Contract Parity**: Full bidirectional synchronization between backend FastAPI endpoints and frontend React SDUI stores.
 
-## 3. Standard Verification Commands
+## 3. UI/UX, Ergonomics & Accessibility Invariants
+
+1. **DOM Retention at 60 FPS**: Tab switching across clinical blocks must preserve DOM hierarchy via CSS visibility (`hidden opacity-0` vs `block opacity-100`), ensuring 0 ms state reload latency.
+2. **Clinical High-Contrast Themes**: Strict color grading for medical alerts (`RED_FLAG` = red-600, `BLACKBOX` = amber-500, `CLINICAL_PEARL` = sky-600).
+3. **Keyboard & Screen-Reader First**: WAI-ARIA 1.2 compliance on all search, combobox, and interactive hotspot canvas components.
+4. **Interactive Hotspot Validation**: Normalized coordinate clamping on $[0, 1]^2$ with Even-Odd Ray-Casting hit detection and $R_{tol} \le 0.02$ visual tolerance indicator.
+
+## 4. Standard Verification Commands
 
 Before submitting any Pull Request or committing changes, execute the corresponding test suites:
 

@@ -1,7 +1,7 @@
 """Pydantic V2 models for Pharmacology and Drug Safety Engine."""
 from enum import Enum, IntEnum
-from typing import List, Dict
-from pydantic import BaseModel, Field, field_validator, ConfigDict
+from typing import List, Dict, Any, Optional
+from pydantic import BaseModel, Field, field_validator, ConfigDict, computed_field, model_validator
 from .exceptions import InvalidATCFormatError
 
 
@@ -42,6 +42,45 @@ class InteractionDetail(BaseModel):
     mechanism: str
     clinical_consequence: str
     management_guideline: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_aliases(cls, values: Any) -> Any:
+        if isinstance(values, dict):
+            new_vals = dict(values)
+            if "drug_a" in new_vals and "source_atc" not in new_vals:
+                new_vals["source_atc"] = new_vals["drug_a"]
+            if "drug_b" in new_vals and "target_atc" not in new_vals:
+                new_vals["target_atc"] = new_vals["drug_b"]
+            if "level" in new_vals and "severity" not in new_vals:
+                new_vals["severity"] = new_vals["level"]
+            return new_vals
+        return values
+
+    @computed_field
+    @property
+    def drug_a(self) -> str:
+        return self.source_atc
+
+    @computed_field
+    @property
+    def drug_b(self) -> str:
+        return self.target_atc
+
+    @computed_field
+    @property
+    def level(self) -> int:
+        return int(self.severity)
+
+    @computed_field
+    @property
+    def is_prodrug_bioactivation_block(self) -> bool:
+        mech = self.mechanism.lower()
+        return "prodrug" in mech or "bioactivation" in mech
+
+
+DrugInteractionRecord = InteractionDetail
+DrugInteractionDetail = InteractionDetail
 
 
 class CYPFunctionalState(BaseModel):
@@ -95,9 +134,9 @@ class PrescribedDrugEntry(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     atc_code: str
-    inn_name: str
-    single_dose_mg: float = Field(gt=0.0)
-    daily_dose_mg: float = Field(gt=0.0)
+    inn_name: str = ""
+    single_dose_mg: float = Field(default=100.0, gt=0.0)
+    daily_dose_mg: float = Field(default=100.0, gt=0.0)
     route: str = "oral"
     is_prodrug: bool = Field(default=False, description="ROA-10 prodrug bioactivation flag")
     is_narrow_therapeutic_index: bool = Field(default=False)
@@ -137,3 +176,18 @@ class DrugSafetyEvaluationReport(BaseModel):
 DrugSafetyEvaluationBlock = DrugSafetyEvaluationReport
 DrugSafetyEvaluationResult = DrugSafetyEvaluationReport
 PrescribedDrugItem = PrescribedDrugEntry
+
+
+class PharmaEvaluationRequest(BaseModel):
+    """Specification for pharmacology safety evaluation."""
+    model_config = ConfigDict(strict=False, extra="ignore")
+
+    patient_id: str = "PATIENT_LOCAL_01"
+    prescribed_drugs: Optional[List[PrescribedDrugEntry]] = None
+    prescribed_atc_codes: Optional[List[str]] = None
+    age: int = 50
+    is_female: bool = False
+    serum_creatinine_mg_dl: float = 1.0
+    serum_potassium_meq_l: float = 4.2
+    patient_genotypes: Optional[Dict[str, str]] = None
+

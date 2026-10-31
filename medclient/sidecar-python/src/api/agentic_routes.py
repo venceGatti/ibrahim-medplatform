@@ -61,12 +61,11 @@ import hmac
 def verify_ipc_token(request: Request, x_tauri_ipc_secret: Optional[str] = Header(None)) -> None:
     """Verify ephemeral IPC secret passed via header strictly and unconditionally (ROA-23)."""
     expected_token = getattr(request.app.state, "ipc_token", None) or os.environ.get("MEDCLIENT_IPC_TOKEN")
-    if expected_token:
-        if not x_tauri_ipc_secret or not hmac.compare_digest(x_tauri_ipc_secret.encode('utf-8'), expected_token.encode('utf-8')):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid or missing X-Tauri-IPC-Secret token",
-            )
+    if not expected_token or not x_tauri_ipc_secret or not hmac.compare_digest(str(x_tauri_ipc_secret), str(expected_token)):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or missing X-Tauri-IPC-Secret token",
+        )
 
 
 @router.get("/health", response_model=AgentHealthResponse)
@@ -179,6 +178,11 @@ def execute_agent_action(
             resolved_term = inv_dict.resolve_colloquial(action_parameter_map.get("phrase", ""))
             return AgentExecuteResponse(success=True, action_type=action_type, execution_outcome={"resolved": resolved_term})
 
+        elif action_type == "SHUTDOWN_SERVER":
+            import threading
+            threading.Timer(0.3, lambda: os._exit(0)).start()
+            return AgentExecuteResponse(success=True, action_type=action_type, execution_outcome={"status": "SHUTTING_DOWN"})
+
         else:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -209,6 +213,7 @@ def get_agent_schema(request: Request, x_tauri_ipc_secret: Optional[str] = Heade
             "EVALUATE_CPIC",
             "SPELLCHECK",
             "RESOLVE_COLLOQUIAL",
+            "SHUTDOWN_SERVER",
         ],
         "openapi": request.app.openapi(),
     }

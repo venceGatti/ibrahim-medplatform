@@ -31,17 +31,24 @@ def parse_arguments() -> argparse.Namespace:
 
 def read_stdin_ipc_token() -> str:
     """
-    Read ephemeral IPC secret token from line 1 of stdin piped by Rust host.
-    Falls back to MEDCLIENT_IPC_TOKEN environment variable if stdin is a tty.
+    Read ephemeral IPC secret token from environment variable or line 1 of stdin.
     """
-    ipc_token = ""
+    ipc_token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
+    if ipc_token:
+        return ipc_token
+
     if not sys.stdin.isatty():
-        first_line = sys.stdin.readline()
-        if first_line:
-            ipc_token = first_line.strip()
+        try:
+            first_line = sys.stdin.readline()
+            if first_line:
+                ipc_token = first_line.strip()
+        except Exception as stdin_read_error:
+            sys.stderr.write(f"[MainCLI] Stdin read exception: {stdin_read_error}\n")
 
     if not ipc_token:
-        ipc_token = os.environ.get("MEDCLIENT_IPC_TOKEN", "")
+        raise ValueError(
+            "IPC Secret Token missing. Sidecar must receive ephemeral token on stdin or via MEDCLIENT_IPC_TOKEN."
+        )
 
     return ipc_token
 

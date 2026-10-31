@@ -1,7 +1,7 @@
 """Pydantic V2 models for Diagnostic Engine (Red Flags, Log-Odds, NBQ)."""
 from enum import Enum
-from typing import List, Optional, Literal
-from pydantic import BaseModel, Field, ConfigDict, computed_field
+from typing import List, Optional, Literal, Any
+from pydantic import BaseModel, Field, ConfigDict, computed_field, model_validator
 
 
 class SystemAlertLevel(str, Enum):
@@ -57,6 +57,35 @@ class DifferentialCandidate(BaseModel):
     supporting_symptoms: List[str]
     rule_out_penalties: List[str]
 
+    @model_validator(mode="before")
+    @classmethod
+    def populate_aliases(cls, values: Any) -> Any:
+        if isinstance(values, dict):
+            new_vals = dict(values)
+            if "name" in new_vals and "disease_name" not in new_vals:
+                new_vals["disease_name"] = new_vals["name"]
+            if "disease_id" in new_vals and "icd10_code" not in new_vals:
+                new_vals["icd10_code"] = new_vals["disease_id"]
+            if "probability" in new_vals and "posterior_probability" not in new_vals:
+                new_vals["posterior_probability"] = new_vals["probability"]
+            return new_vals
+        return values
+
+    @computed_field
+    @property
+    def disease_id(self) -> str:
+        return self.icd10_code
+
+    @computed_field
+    @property
+    def name(self) -> str:
+        return self.disease_name
+
+    @computed_field
+    @property
+    def probability(self) -> float:
+        return self.posterior_probability
+
 
 class NextBestQuestion(BaseModel):
     """Optimal differentiating question selected by Active Discrimination."""
@@ -72,6 +101,26 @@ class NextBestQuestion(BaseModel):
     @property
     def feature_code(self) -> str:
         return self.target_hpo_id
+
+    @computed_field
+    @property
+    def question_id(self) -> str:
+        return self.target_hpo_id
+
+    @computed_field
+    @property
+    def text(self) -> str:
+        return self.target_phenotype_label
+
+    @computed_field
+    @property
+    def hpo_id(self) -> str:
+        return self.target_hpo_id
+
+    @computed_field
+    @property
+    def information_gain_bits(self) -> float:
+        return self.expected_information_gain
 
 
 class SymptomMatcherInput(BaseModel):

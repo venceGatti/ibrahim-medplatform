@@ -1,6 +1,10 @@
 import type {
   CanonicalBlockType,
+  ClinicalSheetBlock,
+  DrugSafetyBlock,
+  ExamSimulatorBlock,
   FsrsRatingGrade,
+  SymptomMatcherBlock,
   SymptomPolarity,
 } from './sduiContracts';
 
@@ -63,7 +67,17 @@ export interface IMedClientStoreState {
   readonly tabScrollOffsets: Readonly<Record<ActiveTabIdentifier, number>>;
   readonly ipcConnectionStatus: 'ONLINE' | 'OFFLINE_LOCAL' | 'RECONNECTING';
   readonly activeCanonicalView: CanonicalBlockType;
+  readonly liveClinicalSheet: ClinicalSheetBlock | null;
+  readonly liveSymptomMatcher: SymptomMatcherBlock | null;
+  readonly liveDrugSafety: DrugSafetyBlock | null;
+  readonly liveExamBlock: ExamSimulatorBlock | null;
+  readonly isSidecarLoading: boolean;
+  readonly sidecarErrorMessage: string | null;
 
+  fetchClinicalSheet: (sheetId: string) => Promise<void>;
+  evaluateDifferentialDiagnosis: () => Promise<void>;
+  evaluatePharmacologySafety: () => Promise<void>;
+  submitExamEvaluation: (itemType: string, userSelection: unknown) => Promise<void>;
   setActiveTab: (targetTab: ActiveTabIdentifier) => void;
   setSearchQuery: (queryText: string) => void;
   toggleSymptomPolarity: (hpoId: string, polarity?: SymptomPolarity) => void;

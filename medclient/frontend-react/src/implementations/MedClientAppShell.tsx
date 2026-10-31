@@ -1,13 +1,8 @@
 import React from 'react';
+import { Globe, Power } from 'lucide-react';
 import { resolveCanonicalBlockType } from '../base/sduiRegistry';
 import { useMedClientStore } from '../base/useMedClientStore';
 import type { ActiveTabIdentifier } from '../interfaces/engineContracts';
-import type {
-  ClinicalSheetBlock,
-  DrugSafetyBlock,
-  ExamSimulatorBlock,
-  SymptomMatcherBlock,
-} from '../interfaces/sduiContracts';
 import { ClinicalSheetBlockView } from './ClinicalSheetBlockView';
 import { DrugSafetyBlockView } from './DrugSafetyBlockView';
 import { ExamSimulatorBlockView } from './ExamSimulatorBlockView';
@@ -56,101 +51,71 @@ export class ClinicalViewErrorBoundary extends React.Component<
   }
 }
 
-const DEFAULT_CLINICAL_SHEET: ClinicalSheetBlock = {
-  block_type: 'ClinicalSheetBlock',
-  sheet_id: 'SHEET_STEMI_01',
-  title: 'Infarto Miocardico Acuto con Sopraslivellamento ST (STEMI)',
-  content_markdown: [
-    '# Presentazione Clinica',
-    'Dolore toracico retrosternale oppressivo irradiato al braccio sinistro e giugulo.',
-    '# Diagnostica ECG 12 Derivazioni',
-    'Sopraslivellamento del tratto ST >= 2 mm nelle derivazioni precordiali contigue.',
-    '# Riperfusione Meccanica Primaria (PCI)',
-    'Attivazione immediata sala di emodinamica con tempo door-to-balloon <= 90 minuti.',
-  ].join('\n'),
-  callouts: [
-    {
-      severity: 'RED_FLAG',
-      title: 'Attivazione Emodinamica',
-      message: 'Eseguire ECG entro 10 minuti dal primo contatto medico.',
-    },
-    {
-      severity: 'BLACKBOX',
-      title: 'Antiaggregazione DAPT',
-      message: 'Evitare co-somministrazione di Clopidogrel e inibitori CYP2C19 (Omeprazolo).',
-    },
-  ],
-  molecule_sha256_svg: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-  molecule_sha256_pdb: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-};
+interface SidecarStatusViewProps {
+  readonly title: string;
+  readonly isLoading: boolean;
+  readonly errorMessage: string | null;
+  readonly onRetry: () => void;
+}
 
-const DEFAULT_SYMPTOM_MATCHER: SymptomMatcherBlock = {
-  block_type: 'SymptomMatcherBlock',
-  differential_candidates: [
-    { disease_id: 'I21.0', name: 'STEMI Parete Anteriore', probability: 0.84, severity: 'CRITICAL' },
-    { disease_id: 'I26.9', name: 'Embolia Polmonare Acuta', probability: 0.11, severity: 'HIGH' },
-    { disease_id: 'I30.0', name: 'Pericardite Acuta', probability: 0.05, severity: 'MODERATE' },
-  ],
-  selected_symptoms: ['HP:0001635', 'HP:0002094'],
-  nbq: {
-    question_id: 'Q_ST_ELEV',
-    hpo_id: 'HP:0001658',
-    text: 'Il tracciato ECG mostra sopraslivellamento ST convesso nelle derivazioni V1-V4?',
-    information_gain_bits: 1.42,
-  },
-  triage_telemetry: {
-    qsofa_score: 2,
-    news2_score: 7,
-    shock_index: 1.12,
-    alert_level: 'RED_CRITICAL',
-    trigger_reason: 'Shock Index > 1.0 e qSOFA >= 2: attivare percorso tempo-dipendente.',
-  },
-};
+export const SidecarStatusView: React.FC<SidecarStatusViewProps> = ({
+  title,
+  isLoading,
+  errorMessage,
+  onRetry,
+}) => {
+  if (isLoading) {
+    return (
+      <div
+        className="flex flex-col items-center justify-center rounded-xl border border-slate-800 bg-slate-900/60 p-12 text-center"
+        data-testid="sdui-loading-indicator"
+      >
+        <div className="mb-4 h-8 w-8 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
+        <h3 className="text-sm font-bold text-white">Caricamento {title} in corso...</h3>
+        <p className="mt-1 text-xs text-slate-400">
+          Interrogazione del Sidecar clinico locale su{' '}
+          <code className="rounded bg-slate-800 px-1 py-0.5 font-mono text-blue-300">
+            http://127.0.0.1:8765
+          </code>
+        </p>
+      </div>
+    );
+  }
 
-const DEFAULT_DRUG_SAFETY: DrugSafetyBlock = {
-  block_type: 'DrugSafetyBlock',
-  interactions: [
-    {
-      drug_a: 'Clopidogrel (B01AC04)',
-      drug_b: 'Omeprazole (A02BC01)',
-      level: 1,
-      mechanism: 'Inibizione competitiva CYP2C19: blocco bioattivazione del profarmaco tiopiridinico.',
-      is_prodrug_bioactivation_block: true,
-    },
-  ],
-  cyp_clearance: {
-    CYP3A4: 0.88,
-    CYP2D6: 0.92,
-    CYP2C9: 0.76,
-    CYP2C19: 0.14,
-    CYP1A2: 0.95,
-  },
-  alerts: [{ code: 'BLACKBOX_INEFFICACY', severity: 1 }],
-  egfr: 64.5,
-  triple_whammy_detected: true,
-  fdc_decompositions: [
-    {
-      brand_or_combo_name: 'Co-Aprovel',
-      active_principles: ['Irbesartan (C09CA04)', 'Hydrochlorothiazide (C03AA03)'],
-    },
-  ],
-};
-
-const DEFAULT_EXAM_BLOCK: ExamSimulatorBlock = {
-  block_type: 'ExamSimulatorBlock',
-  item_type: 'MCQ',
-  question_spec: {
-    question_id: 'Q_CARDIO_01',
-    stem: 'Quale gastroprotettore e preferibile associare alla DAPT con Clopidogrel per preservare la funzione CYP2C19?',
-    options: [
-      'Omeprazolo 40 mg',
-      'Pantoprazolo 20 mg',
-      'Esomeprazolo 40 mg',
-      'Fluconazolo 200 mg',
-    ],
-    correct_index: 1,
-  },
-  fsrs_card_state: { stability: 6.4, difficulty: 4.1, reps: 4 },
+  return (
+    <div
+      className="rounded-xl border border-amber-600/60 bg-amber-950/30 p-6 text-amber-100"
+      data-testid="sdui-offline-indicator"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-amber-900/60 p-2 text-amber-400">
+          <Power className="h-5 w-5" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-sm font-bold text-amber-200">
+            Sidecar Clinico Locale Non Raggiungibile
+          </h3>
+          <p className="mt-1 text-xs text-amber-300/80">
+            Impossibile recuperare i dati per <span className="font-semibold text-white">{title}</span>.
+            Verificare che il runtime FastAPI sia attivo su 127.0.0.1:8765 con l&apos;header X-Tauri-IPC-Secret.
+          </p>
+          {errorMessage && (
+            <p className="mt-2 rounded bg-black/40 p-2 font-mono text-xs text-red-300">
+              {errorMessage}
+            </p>
+          )}
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 rounded bg-amber-600 px-3 py-1.5 text-xs font-semibold text-slate-950 hover:bg-amber-500 transition"
+            data-testid="sdui-retry-connection-button"
+          >
+            Riprova Connessione
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const NAVIGATION_TABS: readonly {
@@ -172,6 +137,84 @@ export const MedClientAppShell: React.FC = () => {
   const ipcConnectionStatus = useMedClientStore((state) => state.ipcConnectionStatus);
   const tabScrollOffsets = useMedClientStore((state) => state.tabScrollOffsets);
   const setTabScrollOffset = useMedClientStore((state) => state.setTabScrollOffset);
+
+  const liveClinicalSheet = useMedClientStore((state) => state.liveClinicalSheet);
+  const liveSymptomMatcher = useMedClientStore((state) => state.liveSymptomMatcher);
+  const liveDrugSafety = useMedClientStore((state) => state.liveDrugSafety);
+  const liveExamBlock = useMedClientStore((state) => state.liveExamBlock);
+  const isSidecarLoading = useMedClientStore((state) => state.isSidecarLoading);
+  const sidecarErrorMessage = useMedClientStore((state) => state.sidecarErrorMessage);
+
+  const fetchClinicalSheet = useMedClientStore((state) => state.fetchClinicalSheet);
+  const evaluateDifferentialDiagnosis = useMedClientStore((state) => state.evaluateDifferentialDiagnosis);
+  const evaluatePharmacologySafety = useMedClientStore((state) => state.evaluatePharmacologySafety);
+  const submitExamEvaluation = useMedClientStore((state) => state.submitExamEvaluation);
+
+  const selectedSymptoms = useMedClientStore((state) => state.selectedSymptoms);
+  const activeMedications = useMedClientStore((state) => state.activeMedications);
+  const renalParameters = useMedClientStore((state) => state.renalParameters);
+
+  const [isShutDown, setIsShutDown] = React.useState(false);
+
+  React.useEffect(() => {
+    void fetchClinicalSheet('SHEET_STEMI_01');
+    void evaluateDifferentialDiagnosis();
+    void evaluatePharmacologySafety();
+    void submitExamEvaluation('MCQ', 1);
+  }, []);
+
+  React.useEffect(() => {
+    void evaluateDifferentialDiagnosis();
+  }, [selectedSymptoms]);
+
+  React.useEffect(() => {
+    void evaluatePharmacologySafety();
+  }, [activeMedications, renalParameters]);
+
+  const handleShutdown = async () => {
+    if (!window.confirm('Vuoi arrestare MedPlatform e terminare tutti i servizi?')) {
+      return;
+    }
+    try {
+      await fetch('http://127.0.0.1:8765/agent/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tauri-IPC-Secret': 'medclient_local_session_secure_token',
+        },
+        body: JSON.stringify({
+          action_type: 'SHUTDOWN_SERVER',
+          action_parameters: {},
+        }),
+      });
+    } catch {
+      // Process exits quickly causing expected network abort
+    }
+    setIsShutDown(true);
+    setTimeout(() => {
+      window.close();
+    }, 1200);
+  };
+
+  const handleOpenBrowser = () => {
+    window.open('http://localhost:5173', '_blank');
+  };
+
+  if (isShutDown) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center text-white">
+        <div className="max-w-md rounded-xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-700/50 bg-red-950/60 text-red-400">
+            <Power className="h-7 w-7" />
+          </div>
+          <h2 className="text-xl font-bold">MedPlatform Arrestata</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            I servizi locali e i motori clinici sono stati arrestati con successo. Puoi chiudere questa scheda.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100" data-testid="medclient-app-shell">
@@ -205,6 +248,40 @@ export const MedClientAppShell: React.FC = () => {
             >
               {ipcConnectionStatus}
             </span>
+
+            {isSidecarLoading && (
+              <span
+                className="flex items-center gap-1.5 text-xs text-blue-400 animate-pulse font-mono"
+                data-testid="sidecar-sync-indicator"
+              >
+                <span className="inline-block h-2 w-2 rounded-full bg-blue-400"></span>
+                SYNC
+              </span>
+            )}
+
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <button
+                type="button"
+                onClick={handleOpenBrowser}
+                title="Apri nuova visualizzazione nel Browser Web"
+                className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-slate-500 hover:bg-slate-700 hover:text-white transition"
+                data-testid="header-open-browser-btn"
+              >
+                <Globe className="h-3.5 w-3.5 text-blue-400" />
+                <span>Apri Web</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShutdown}
+                title="Arresta tutti i servizi MedPlatform"
+                className="flex items-center gap-1.5 rounded border border-red-900/60 bg-red-950/40 px-2.5 py-1 text-xs font-semibold text-red-300 hover:border-red-700 hover:bg-red-900/60 hover:text-white transition"
+                data-testid="header-shutdown-btn"
+              >
+                <Power className="h-3.5 w-3.5 text-red-400" />
+                <span>Spegni</span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -241,11 +318,20 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-clinical_sheet"
           >
-            <ClinicalSheetBlockView
-              block={DEFAULT_CLINICAL_SHEET}
-              scrollTopPx={tabScrollOffsets.clinical_sheet}
-              onScrollOffsetChange={(offset) => setTabScrollOffset('clinical_sheet', offset)}
-            />
+            {liveClinicalSheet ? (
+              <ClinicalSheetBlockView
+                block={liveClinicalSheet}
+                scrollTopPx={tabScrollOffsets.clinical_sheet}
+                onScrollOffsetChange={(offset) => setTabScrollOffset('clinical_sheet', offset)}
+              />
+            ) : (
+              <SidecarStatusView
+                title="Monografia Clinica (/api/v3/sheets)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void fetchClinicalSheet('SHEET_STEMI_01')}
+              />
+            )}
           </div>
 
           <div
@@ -254,7 +340,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-symptom_matcher"
           >
-            <SymptomMatcherBlockView block={DEFAULT_SYMPTOM_MATCHER} />
+            {liveSymptomMatcher ? (
+              <SymptomMatcherBlockView block={liveSymptomMatcher} />
+            ) : (
+              <SidecarStatusView
+                title="Diagnosi Differenziale (/api/v3/engine/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void evaluateDifferentialDiagnosis()}
+              />
+            )}
           </div>
 
           <div
@@ -263,7 +358,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-drug_safety"
           >
-            <DrugSafetyBlockView block={DEFAULT_DRUG_SAFETY} />
+            {liveDrugSafety ? (
+              <DrugSafetyBlockView block={liveDrugSafety} />
+            ) : (
+              <SidecarStatusView
+                title="Sicurezza Farmacologica (/api/v3/pharma/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void evaluatePharmacologySafety()}
+              />
+            )}
           </div>
 
           <div
@@ -272,7 +376,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-exam_simulator"
           >
-            <ExamSimulatorBlockView block={DEFAULT_EXAM_BLOCK} />
+            {liveExamBlock ? (
+              <ExamSimulatorBlockView block={liveExamBlock} />
+            ) : (
+              <SidecarStatusView
+                title="Simulatore Esami (/api/v3/exam/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void submitExamEvaluation('MCQ', 1)}
+              />
+            )}
           </div>
         </ClinicalViewErrorBoundary>
       </main>

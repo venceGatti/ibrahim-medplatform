@@ -33,6 +33,15 @@ jobs:
       - name: Run MedFactory Tests
         run: |
           PYTHONPATH=$PWD pytest medfactory/tests -v
+          pip install -r medclient/sidecar-python/requirements.txt
+          pip install -r requirements.txt
+          pip install -r medfactory/requirements.txt
+          pip install pytest pytest-asyncio polars pycryptodome httpx fastapi uvicorn
+          pip install -r medfactory/requirements.txt
+
+      - name: Run MedFactory Tests
+        run: |
+          PYTHONPATH=. pytest medfactory/tests -v
 
       - name: Run Python Sidecar Tests
         run: |
