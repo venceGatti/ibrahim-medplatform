@@ -85,7 +85,14 @@ def create_app(ipc_token: str = "") -> FastAPI:
     # Restrict to loopback CORS
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://127.0.0.1", "http://localhost", "tauri://localhost"],
+        allow_origins=[
+            "http://127.0.0.1",
+            "http://127.0.0.1:5173",
+            "http://localhost",
+            "http://localhost:5173",
+            "tauri://localhost",
+        ],
+        allow_origin_regex=r"^http://(127\.0\.0\.1|localhost)(:\d+)?$",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
