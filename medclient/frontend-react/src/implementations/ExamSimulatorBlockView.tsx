@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   evaluateHotspotHitWithTolerance,
   normalizeClickCoordinates,
@@ -43,6 +43,18 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
     questionSpec.current_step ?? 'STEP_01'
   );
 
+  useEffect(() => {
+    const existingAnswer = examAnswers[questionId];
+    if (existingAnswer === 'HOTSPOT_HIT') {
+      setHotspotHitStatus('HIT');
+    } else if (existingAnswer === 'HOTSPOT_MISS') {
+      setHotspotHitStatus('MISS');
+    } else if (!existingAnswer) {
+      setHotspotHitStatus('IDLE');
+      setLastClickCoords(null);
+    }
+  }, [questionId, examAnswers]);
+
   const handleHotspotCanvasClick = (mouseEv: React.MouseEvent<HTMLDivElement>): void => {
     const rect = mouseEv.currentTarget.getBoundingClientRect();
     const effectiveRect =
@@ -50,12 +62,14 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
         ? rect
         : { left: 0, top: 0, width: 400, height: 300 };
 
-    const [normU, normV] = normalizeClickCoordinates(
+    const [rawU, rawV] = normalizeClickCoordinates(
       mouseEv.clientX,
       mouseEv.clientY,
       effectiveRect
     );
-    setLastClickCoords([normU, normV]);
+    const clampedU = Math.max(0.0, Math.min(1.0, rawU));
+    const clampedV = Math.max(0.0, Math.min(1.0, rawV));
+    setLastClickCoords([clampedU, clampedV]);
 
     const polygons = questionSpec.target_polygons ?? [
       [
@@ -64,7 +78,7 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
         [0.4, 0.6],
       ],
     ];
-    const hitAny = polygons.some((poly) => evaluateHotspotHitWithTolerance(normU, normV, poly));
+    const hitAny = polygons.some((poly) => evaluateHotspotHitWithTolerance(clampedU, clampedV, poly));
     setHotspotHitStatus(hitAny ? 'HIT' : 'MISS');
     recordExamAnswer(questionId, hitAny ? 'HOTSPOT_HIT' : 'HOTSPOT_MISS');
   };

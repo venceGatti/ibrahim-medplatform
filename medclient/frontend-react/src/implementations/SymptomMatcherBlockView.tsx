@@ -117,35 +117,36 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
   const removeSymptom = useMedClientStore((state) => state.removeSymptom);
 
   const rawSuggestions = lookupHpoWithSymSpell(symptomInput);
-  const suggestions = isDropdownVisible ? rawSuggestions : [];
   const triage = block.triage_telemetry;
   const radarPoints = buildRadarPolygonPoints(block.differential_candidates);
 
   const activeOptionId =
-    highlightedIndex >= 0 && highlightedIndex < suggestions.length
-      ? `hpo-opt-${suggestions[highlightedIndex].hpoId.replace(':', '-')}`
+    isDropdownVisible && highlightedIndex >= 0 && highlightedIndex < rawSuggestions.length
+      ? `hpo-opt-${rawSuggestions[highlightedIndex].hpoId.replace(':', '-')}`
       : undefined;
 
   const handleInputKeyDown = (keyboardEvent: React.KeyboardEvent<HTMLInputElement>): void => {
-    if (suggestions.length === 0) {
+    if (rawSuggestions.length === 0) {
       return;
     }
     if (keyboardEvent.key === 'ArrowDown') {
       keyboardEvent.preventDefault();
       setIsDropdownVisible(true);
       setHighlightedIndex((previousIndex) =>
-        previousIndex + 1 >= suggestions.length ? 0 : previousIndex + 1
+        previousIndex + 1 >= rawSuggestions.length ? 0 : previousIndex + 1
       );
     } else if (keyboardEvent.key === 'ArrowUp') {
       keyboardEvent.preventDefault();
       setIsDropdownVisible(true);
       setHighlightedIndex((previousIndex) =>
-        previousIndex <= 0 ? suggestions.length - 1 : previousIndex - 1
+        previousIndex <= 0 ? rawSuggestions.length - 1 : previousIndex - 1
       );
     } else if (keyboardEvent.key === 'Enter') {
-      if (highlightedIndex >= 0 && highlightedIndex < suggestions.length) {
+      if (rawSuggestions.length > 0) {
         keyboardEvent.preventDefault();
-        const selectedEntry = suggestions[highlightedIndex];
+        const targetIndex =
+          highlightedIndex >= 0 && highlightedIndex < rawSuggestions.length ? highlightedIndex : 0;
+        const selectedEntry = rawSuggestions[targetIndex];
         toggleSymptomPolarity(selectedEntry.hpoId, 'PRESENT');
         setSymptomInput('');
         setHighlightedIndex(-1);
@@ -192,8 +193,9 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
           id="symptom-search-field"
           type="text"
           role="combobox"
+          aria-haspopup="listbox"
           aria-autocomplete="list"
-          aria-expanded={suggestions.length > 0}
+          aria-expanded={isDropdownVisible && rawSuggestions.length > 0}
           aria-controls="symspell-suggestions-list"
           aria-activedescendant={activeOptionId}
           value={symptomInput}
@@ -207,7 +209,7 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
           className="w-full rounded-md border border-slate-700 bg-slate-950 px-3 py-2 text-sm text-white focus:border-blue-500 focus:outline-none"
           data-testid="symptom-search-input"
         />
-        {suggestions.length > 0 && (
+        {isDropdownVisible && rawSuggestions.length > 0 && (
           <div
             id="symspell-suggestions-list"
             role="listbox"
@@ -215,7 +217,7 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
             className="flex flex-wrap gap-2 pt-1"
             data-testid="symspell-suggestions"
           >
-            {suggestions.map((entry, optionIndex) => {
+            {rawSuggestions.map((entry, optionIndex) => {
               const optionElementId = `hpo-opt-${entry.hpoId.replace(':', '-')}`;
               const isOptionHighlighted = highlightedIndex === optionIndex;
               return (

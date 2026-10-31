@@ -81,7 +81,7 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
   const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);
 
   const hasBlackboxProdrugAlert = block.alerts.some(
-    (alertItem) => alertItem.code === 'BLACKBOX_INEFFICACY' || alertItem.severity === 1
+    (safetyAlert) => safetyAlert.code === 'BLACKBOX_INEFFICACY' || safetyAlert.severity === 1
   );
 
   return (
@@ -235,17 +235,17 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
             Decomposizione FDC (Combinazioni a Dose Fissa)
           </span>
           <div className="flex flex-wrap gap-2 pt-0.5">
-            {block.fdc_decompositions.map((fdcItem) => (
+            {block.fdc_decompositions.map((fdcDecomposition) => (
               <div
-                key={fdcItem.brand_or_combo_name}
+                key={fdcDecomposition.brand_or_combo_name}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-purple-500/40 bg-purple-950/60 px-3 py-1.5 text-xs text-purple-200 shadow-sm"
-                data-testid={`fdc-badge-${fdcItem.brand_or_combo_name}`}
+                data-testid={`fdc-badge-${fdcDecomposition.brand_or_combo_name}`}
               >
                 <span className="font-extrabold text-purple-400">FDC:</span>
-                <span className="font-bold text-white">{fdcItem.brand_or_combo_name}</span>
+                <span className="font-bold text-white">{fdcDecomposition.brand_or_combo_name}</span>
                 <span className="text-purple-300">&rarr;</span>
                 <span className="font-medium text-purple-100">
-                  {fdcItem.active_principles.join(' + ')}
+                  {fdcDecomposition.active_principles.join(' + ')}
                 </span>
               </div>
             ))}

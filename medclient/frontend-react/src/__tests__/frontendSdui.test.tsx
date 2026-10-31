@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   DAGNodeNotFoundError,
   listRegisteredBlockAliases,
@@ -276,13 +276,20 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     const searchInput = screen.getByTestId('symptom-search-input');
     expect(searchInput.getAttribute('role')).toBe('combobox');
     expect(searchInput.getAttribute('aria-autocomplete')).toBe('list');
+    expect(searchInput.getAttribute('aria-haspopup')).toBe('listbox');
 
     fireEvent.change(searchInput, { target: { value: 'dyspnea' } });
     const suggestionsContainer = screen.getByTestId('symspell-suggestions');
     expect(suggestionsContainer).toBeTruthy();
+    expect(searchInput.getAttribute('aria-expanded')).toBe('true');
 
-    // Navigate with ArrowDown
+    // Test Escape closes dropdown and clears active descendant
+    fireEvent.keyDown(searchInput, { key: 'Escape' });
+    expect(searchInput.getAttribute('aria-expanded')).toBe('false');
+
+    // Test ArrowDown re-opens dropdown after Escape
     fireEvent.keyDown(searchInput, { key: 'ArrowDown' });
+    expect(searchInput.getAttribute('aria-expanded')).toBe('true');
     expect(searchInput.getAttribute('aria-activedescendant')).toContain('hpo-opt-HP-0002094');
 
     // Select with Enter
@@ -299,7 +306,17 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(presentBadge.textContent).toContain('NEGATIVO PERTINENTE');
     expect(presentBadge.textContent).toContain('✕');
 
-    // 4. Hotspot Feedback Ring with R_tol <= 0.02
+    // 4. Hotspot Feedback Ring with R_tol <= 0.02 and boundary precision
+    const testTriangle = [
+      [0.1, 0.1],
+      [0.9, 0.1],
+      [0.5, 0.9],
+    ] as const;
+    // Boundary vertex precision near 1e-6
+    expect(evaluateHotspotHitWithTolerance(0.1000005, 0.1000005, testTriangle, 0.02)).toBe(true);
+    // Outside boundary tolerance
+    expect(evaluateHotspotHitWithTolerance(0.1, 0.079, testTriangle, 0.02)).toBe(false);
+
     render(
       <ExamSimulatorBlockView
         block={{
@@ -326,5 +343,11 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     const latestRing = feedbackRings[feedbackRings.length - 1];
     expect(latestRing).toBeTruthy();
     expect(latestRing.getAttribute('data-hit-status')).toBe('HIT');
+
+    // Resetting session synchronizes and clears hotspot answer
+    act(() => {
+      useMedClientStore.getState().resetExamSessionOnly();
+    });
+    expect(useMedClientStore.getState().examAnswers['Q_TOLERANCE_TEST']).toBeUndefined();
   });
 });
