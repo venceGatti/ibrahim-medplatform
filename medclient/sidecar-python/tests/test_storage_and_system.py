@@ -127,8 +127,9 @@ def test_agentic_api_endpoints():
     assert res_exec.status_code == 200
     exec_data = res_exec.json()
     assert exec_data["success"] is True
-    assert "egfr" in exec_data["result"]
-    assert exec_data["result"]["egfr"] > 0
+    outcome_map = exec_data.get("execution_outcome") or exec_data.get("result", {})
+    assert "egfr" in outcome_map
+    assert outcome_map["egfr"] > 0
 
 
 def test_user_state_store_strict_schema_and_operations():

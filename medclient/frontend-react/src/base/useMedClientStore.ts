@@ -1,14 +1,10 @@
 import { create } from 'zustand';
-import { SidecarIpcClient } from './sidecarIpcClient';
-import type {
-  ActiveTabIdentifier,
-  IMedClientStoreState,
-  RenalPatientParameters,
-} from '../interfaces/engineContracts';
+import type { ActiveTabIdentifier, IMedClientStoreState, RenalPatientParameters } from '../interfaces/engineContracts';
 import type {
   CanonicalBlockType,
   ClinicalSheetBlock,
   DrugSafetyBlock,
+  EmergencyTriageTelemetry,
   ExamSimulatorBlock,
   FsrsRatingGrade,
   SymptomMatcherBlock,
@@ -52,15 +48,9 @@ export function computeCkdEpi2021Egfr(
 }
 
 function mapTabToCanonicalBlock(tabId: ActiveTabIdentifier): CanonicalBlockType {
-  if (tabId === 'symptom_matcher') {
-    return 'SymptomMatcherBlock';
-  }
-  if (tabId === 'drug_safety') {
-    return 'DrugSafetyBlock';
-  }
-  if (tabId === 'exam_simulator') {
-    return 'ExamSimulatorBlock';
-  }
+  if (tabId === 'symptom_matcher') return 'SymptomMatcherBlock';
+  if (tabId === 'drug_safety') return 'DrugSafetyBlock';
+  if (tabId === 'exam_simulator') return 'ExamSimulatorBlock';
   return 'ClinicalSheetBlock';
 }
 
@@ -83,18 +73,10 @@ const DEFAULT_RENAL_PARAMETERS: RenalPatientParameters = {
 const DEFAULT_PERSISTED_SLICE: PersistedSlice = {
   activeTab: 'clinical_sheet',
   searchQuery: '',
-  selectedSymptoms: {
-    'HP:0001635': 'PRESENT',
-    'HP:0002094': 'PRESENT',
-  },
+  selectedSymptoms: { 'HP:0001635': 'PRESENT', 'HP:0002094': 'PRESENT' },
   activeMedications: ['B01AC04', 'A02BC01'],
   renalParameters: DEFAULT_RENAL_PARAMETERS,
-  tabScrollOffsets: {
-    clinical_sheet: 0,
-    symptom_matcher: 0,
-    drug_safety: 0,
-    exam_simulator: 0,
-  },
+  tabScrollOffsets: { clinical_sheet: 0, symptom_matcher: 0, drug_safety: 0, exam_simulator: 0 },
 };
 
 export function loadPersistedMedClientState(): PersistedSlice {
@@ -227,13 +209,24 @@ export const useMedClientStore = create<IMedClientStoreState>((set, get) => ({
 
       const updatedBlock: SymptomMatcherBlock = {
         block_type: 'SymptomMatcherBlock',
-        differential_candidates: output.differential_diagnosis.map((candidateEntry) => ({
-          disease_id: candidateEntry.icd10_code ?? candidateEntry.name,
-          name: candidateEntry.name,
-          probability: candidateEntry.probability ?? 0.5,
-          icd10_code: candidateEntry.icd10_code,
-          severity: (candidateEntry.probability ?? 0) > 0.7 ? 'CRITICAL' : 'HIGH',
-        })),
+        differential_candidates: output.differential_diagnosis.map((candidateEntry) => {
+          const anyCand = candidateEntry as unknown as Record<string, unknown>;
+          const diseaseId = String(anyCand.icd10_code ?? anyCand.disease_id ?? anyCand.name ?? anyCand.disease_name ?? 'UNKNOWN');
+          const name = String(anyCand.name ?? anyCand.disease_name ?? diseaseId);
+          const rawProb = typeof anyCand.probability === 'number'
+            ? anyCand.probability
+            : typeof anyCand.posterior_probability === 'number'
+              ? anyCand.posterior_probability
+              : 0.5;
+          const severity = (rawProb > 0.7 ? 'CRITICAL' : rawProb > 0.4 ? 'HIGH' : 'MODERATE') as 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+          return {
+            disease_id: diseaseId,
+            name,
+            probability: rawProb,
+            icd10_code: anyCand.icd10_code ? String(anyCand.icd10_code) : undefined,
+            severity,
+          };
+        }),
         selected_symptoms: Object.keys(rawSymptoms),
         nbq: output.nbq ?? {
           question_id: 'NBQ_01',
@@ -263,30 +256,9 @@ export const useMedClientStore = create<IMedClientStoreState>((set, get) => ({
     set({ isSidecarLoading: true, sidecarErrorMessage: null });
     try {
       const renal = get().renalParameters;
-      const drugCatalog: Record<
-        string,
-        {
-          inn: string;
-          single: number;
-          daily: number;
-          prodrug: boolean;
-          fm?: Record<string, number>;
-        }
-      > = {
-        B01AC04: {
-          inn: 'Clopidogrel',
-          single: 75.0,
-          daily: 75.0,
-          prodrug: true,
-          fm: { CYP2C19: 0.85 },
-        },
-        A02BC01: {
-          inn: 'Omeprazole',
-          single: 20.0,
-          daily: 20.0,
-          prodrug: false,
-          fm: { CYP2C19: 0.7 },
-        },
+      const drugCatalog: Record<string, { inn: string; single: number; daily: number; prodrug: boolean; fm?: Record<string, number> }> = {
+        B01AC04: { inn: 'Clopidogrel', single: 75.0, daily: 75.0, prodrug: true, fm: { CYP2C19: 0.85 } },
+        A02BC01: { inn: 'Omeprazole', single: 20.0, daily: 20.0, prodrug: false, fm: { CYP2C19: 0.7 } },
         C09CA04: { inn: 'Irbesartan', single: 150.0, daily: 150.0, prodrug: false },
         C03AA03: { inn: 'Hydrochlorothiazide', single: 12.5, daily: 12.5, prodrug: false },
         M01AE01: { inn: 'Ibuprofen', single: 400.0, daily: 1200.0, prodrug: false },

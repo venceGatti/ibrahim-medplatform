@@ -3,7 +3,7 @@ import {
   evaluateHotspotHitWithTolerance,
   normalizeClickCoordinates,
 } from '../base/hotspotGeometry';
-import { useMedClientStore } from '../base/useMedClientStore';
+import { sidecarIpcClient, useMedClientStore } from '../base/useMedClientStore';
 import type {
   ExamSimulatorBlock,
   FsrsRatingGrade,
@@ -84,15 +84,34 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
     recordExamAnswer(questionId, hitAny ? 'HOTSPOT_HIT' : 'HOTSPOT_MISS');
   };
 
-  const handleEvaluateNliOpen = (): void => {
-    const trimmedHypothesis = openResponseText.trim().toLowerCase();
-    const referencePremise = (questionSpec.reference_premise ?? 'epinephrine').toLowerCase();
-    const isEntailed =
-      trimmedHypothesis.length >= 4 &&
-      (trimmedHypothesis.includes(referencePremise) ||
-        referencePremise.includes(trimmedHypothesis));
-    setNliPassed(isEntailed);
-    recordExamAnswer(questionId, openResponseText.trim());
+  const handleEvaluateNliOpen = async (): Promise<void> => {
+    const trimmedHypothesis = openResponseText.trim();
+    if (trimmedHypothesis.length === 0) {
+      return;
+    }
+    try {
+      const evaluationResult = await sidecarIpcClient.evaluateExam<ExamSimulatorBlock>({
+        item_type: 'NLI_OPEN',
+        item_data: {
+          question_id: questionId,
+          reference_premise: questionSpec.reference_premise ?? '',
+          entailment_threshold: questionSpec.entailment_threshold ?? 0.7,
+        },
+        user_selection: trimmedHypothesis,
+        fsrs_card_state: block.fsrs_card_state,
+      });
+
+      const outcomeData = (evaluationResult.item_data as Record<string, unknown>)?.evaluation_outcome as
+        | { is_correct?: boolean; feedback?: string }
+        | undefined;
+
+      const isEntailed = Boolean(outcomeData?.is_correct);
+      setNliPassed(isEntailed);
+      recordExamAnswer(questionId, trimmedHypothesis);
+    } catch {
+      setNliPassed(false);
+      recordExamAnswer(questionId, trimmedHypothesis);
+    }
   };
 
   const dagNodes = questionSpec.dag_nodes ?? {

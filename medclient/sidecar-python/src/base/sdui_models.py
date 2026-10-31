@@ -71,6 +71,9 @@ class DrugSafetyBlock(BaseModel):
     cyp_clearance: Dict[str, Any] = Field(default_factory=dict)
     alerts: List[Dict[str, Any]] = Field(default_factory=list)
     egfr: float
+    qtc_tisdale_score: Optional[float] = None
+    triple_whammy_detected: Optional[bool] = None
+    fdc_decompositions: Optional[List[Dict[str, Any]]] = None
 
 
 # 4. ExamSimulatorBlock (aliased to ClinicalExamBlock / InteractiveFlowchartBlock / AnatomicalHotspotBlock)

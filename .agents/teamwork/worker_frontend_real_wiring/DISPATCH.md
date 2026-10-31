@@ -72,3 +72,30 @@ L'auditor forense ha rilevato 3 violazioni specifiche nel frontend da correggere
 Verifica che `npm run build` e `npx vitest run` abbiano esito positivo (exit code 0).
 
 **Action**: Implementa queste correzioni nel codice frontend per sanare i rilievi forensi.
+
+
+## 2026-10-31T18:09:32Z
+**Context**: Rilievi Critici di Coesione Frontend SDUI da `cohesion_inspector_2`.
+
+**Content**:
+L'ispettore di coesione ha rilevato disallineamenti di schema e contratti lato frontend da armonizzare con il backend:
+
+1. **Chiamata `/api/v3/pharma/evaluate` in `SidecarIpcClient.ts`**:
+   Invia un body JSON conforme a:
+   `{ patient_id: string, prescribed_atc_codes: string[], ehr_conditions: string[], lab_biomarkers: Record<string, number> }`
+   con header `X-Tauri-IPC-Secret`.
+
+2. **Parità di Proprietà nei Blocchi SDUI**:
+   - `DrugInteractionRecord` in `DrugSafetyBlockView.tsx`: gestisci in modo tollerante sia `item.drug_a || item.source_atc`, `item.drug_b || item.target_atc`, `item.level || item.severity`, `item.mechanism` per evitare visualizzazioni con `undefined`.
+   - `DifferentialCandidate` in `useMedClientStore.ts`: mappa sia `candidate.name || candidate.disease_name` e `candidate.probability ?? candidate.posterior_probability`.
+
+3. **Eradicazione Completa dei Fallback Fittizi in `MedClientAppShell.tsx`**:
+   Rimuovi tutti gli operatori `?? DEFAULT_*`. Se i dati dal sidecar non sono ancora pronti, mostra uno stato di caricamento o errore esplicito della UI clinica (`Connecting to local medical sidecar...`), mai dati fittizi o oggetti di mock.
+
+4. **Integrazione Reale di `ExamSimulatorBlockView` e `SymptomMatcherBlockView`**:
+   - `ExamSimulatorBlockView`: su sottomissione risposta, invoca `SidecarIpcClient.evaluateExam(...)` chiamando `/api/v3/exam/evaluate`.
+   - `SymptomMatcherBlockView`: per ricerca sintomi e diagnosi, invoca `SidecarIpcClient.evaluateSymptoms(...)` chiamando `/api/v3/engine/evaluate`.
+
+Verifica che `npm run build` e `npx vitest run` compilino ed eseguano con successo.
+
+**Action**: Implementa queste modifiche in `medclient/frontend-react/`.

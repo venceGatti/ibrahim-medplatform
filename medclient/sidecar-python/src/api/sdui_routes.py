@@ -2,8 +2,8 @@
 import os
 import sys
 import time
-from typing import Dict, Any, List, Optional
-from fastapi import APIRouter, HTTPException, Request, Header, Depends, status
+from typing import Dict, Any, List, Optional, Union
+from fastapi import APIRouter, HTTPException, Request, Header, Depends, status, Body, Query
 from pydantic import BaseModel, ConfigDict
 from ..base.diagnostic_models import (
     SymptomMatcherInput,
@@ -14,6 +14,7 @@ from ..base.diagnostic_models import (
 from ..base.pharmacology_models import (
     PrescribedDrugItem,
     SeverityLevel,
+    PharmaEvaluationRequest,
 )
 from ..base.sdui_models import (
     ClinicalSheetBlock,
@@ -195,20 +196,14 @@ def evaluate_exam_item(evaluation_request: ExamEvaluationRequest, request: Reque
     }
 
     updated_fsrs = evaluation_request.fsrs_card_state
-    if updated_fsrs and "stability" in updated_fsrs:
+    if updated_fsrs and ("stability" in updated_fsrs or "concept_uid" in updated_fsrs):
         scheduler = getattr(request.app.state, "fsrs_scheduler", None) or FSRSScheduler()
         rating = 3 if is_correct else 1
-        review_step = scheduler.step(
-            FSRSReviewInput(
-                stability=float(updated_fsrs["stability"]),
-                difficulty=float(updated_fsrs.get("difficulty", 5.0)),
-                elapsed_days=float(updated_fsrs.get("elapsed_days", 1.0)),
-                reps=int(updated_fsrs.get("reps", 0)),
-                lapses=int(updated_fsrs.get("lapses", 0)),
-                rating=rating,
-            )
+        review_step = scheduler.review_card(
+            card_state=dict(updated_fsrs),
+            rating=rating,
         )
-        updated_fsrs = review_step.model_dump()
+        updated_fsrs = dict(review_step)
 
     return ExamSimulatorBlock(
         block_type="ExamSimulatorBlock",
@@ -223,9 +218,22 @@ def evaluate_exam_item(evaluation_request: ExamEvaluationRequest, request: Reque
 def schedule_fsrs_review(review_input: FSRSReviewInput, request: Request) -> FSRSReviewOutput:
     """Schedule next review using deterministic FSRS scheduler (ROA-17)."""
     scheduler = getattr(request.app.state, "fsrs_scheduler", None) or FSRSScheduler()
-    review_output = scheduler.step(review_input)
-
     user_state = getattr(request.app.state, "user_state_store", None)
+    initial_card_state = {"concept_uid": review_input.concept_uid}
+    if user_state:
+        existing = user_state.get_card(review_input.concept_uid)
+        if existing:
+            initial_card_state = existing
+
+    review_dict = scheduler.review_card(
+        card_state=initial_card_state,
+        rating=int(review_input.rating),
+        review_time=review_input.review_time,
+        desired_retention=review_input.desired_retention,
+        target_exam_date=review_input.target_exam_date,
+    )
+    review_output = FSRSReviewOutput(**review_dict)
+
     if user_state:
         try:
             user_state.upsert_card(review_output.model_dump())

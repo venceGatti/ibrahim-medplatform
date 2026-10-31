@@ -161,6 +161,7 @@ export interface ExamSimulatorBlock {
     | 'AnatomicalHotspotBlock';
   readonly item_type: ExamModeType | string;
   readonly question_spec?: ExamQuestionSpec;
+  readonly item_data?: Readonly<Record<string, unknown>>;
   readonly fsrs_card_state: FsrsCardState;
 }
 

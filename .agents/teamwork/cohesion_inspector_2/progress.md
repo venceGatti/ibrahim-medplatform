@@ -1,11 +1,20 @@
 # Progress - cohesion_inspector_2
 
-- Last visited: 2026-10-31T17:44:00Z
-- Status: Active deep dive into Frontend SDUI <-> FastAPI Sidecar parity and cross-boundary cohesion.
-- Current task:
-  - Deep inspection of `medclient/frontend-react/` (`MedClientAppShell.tsx`, `useMedClientStore.ts`, `SidecarIpcClient.ts`, etc.)
-  - Deep inspection of FastAPI endpoints (`/api/v3/engine/evaluate`, `/api/v3/pharma/evaluate`, `/api/v3/sheets/{sheet_id}`, `/api/v3/exam/evaluate`)
-  - Verification of headers (`X-Tauri-IPC-Secret`), payload types, parameter names, and fallback behaviors (checking for static/fictitious fallbacks like `DEFAULT_CLINICAL_SHEET`, `DEFAULT_SYMPTOM_MATCHER`, etc.)
-  - Verification of asset requests via `med-asset://`
-  - Verification of SQLite hot-swap contract and active_db.json
-  - Verification of test suite in `tests/`
+- Last visited: 2026-10-31T18:07:00Z
+- Status: Inspection complete. Verdict issued: REQUEST_CHANGES (INTEGRITY VIOLATION).
+- Completed steps:
+  - Created BRIEFING.md and DISPATCH.md
+  - Conducted end-to-end cohesion and signature verification across all subsystems
+  - Verified request/response parity between FastAPI sidecar and React SDUI
+  - Executed test commands:
+    * `cargo test` in `medclient/core-rust`: 9 passed
+    * `pytest` in `medclient/sidecar-python/tests`: 23 passed
+    * `pytest` in `medfactory/tests`: 4 passed
+    * `npm run build` in `medclient/frontend-react`: passed
+    * `npx vitest run` in `medclient/frontend-react`: 8 passed
+  - Discovered fatal runtime exception in `sdui_routes.py` (`scheduler.step` does not exist on `FSRSScheduler`)
+  - Discovered critical contract skew on `DrugSafetyBlock` (`source_atc`/`target_atc`/`severity` vs `drug_a`/`drug_b`/`level`) and `SymptomMatcherBlock` (`disease_name`/`posterior_probability` vs `name`/`probability`)
+  - Discovered integrity violation in frontend shell (`DEFAULT_*` hardcoded static mock fallbacks) and disconnected `ExamSimulatorBlockView.tsx`
+  - Discovered tautological tests in `test_f41_f44_frontend_views_store.py` and `test_f45_f48_frontend_blocks_canvas.py`
+  - Authored comprehensive `analysis.md` and structured 5-component `handoff.md`
+  - Notified parent orchestrator via `send_message`

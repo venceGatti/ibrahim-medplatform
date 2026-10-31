@@ -2,88 +2,32 @@ import React, { useState, useEffect } from 'react';
 import { useMedClientStore } from '../base/useMedClientStore';
 import type { DifferentialCandidate, SymptomMatcherBlock } from '../interfaces/sduiContracts';
 
+import { sidecarIpcClient } from '../base/useMedClientStore';
+import type { HybridSearchResponse } from '../interfaces/sduiContracts';
+
 export interface HpoLexiconEntry {
   readonly hpoId: string;
   readonly clinicalTerm: string;
   readonly colloquialSynonyms: readonly string[];
 }
 
-export const COLLOQUIAL_HPO_DICTIONARY: readonly HpoLexiconEntry[] = [
-  {
-    hpoId: 'HP:0002094',
-    clinicalTerm: 'Dyspnea',
-    colloquialSynonyms: ['fiato corto', 'mancanza di respiro', 'affanno', 'dyspnea'],
-  },
-  {
-    hpoId: 'HP:0001635',
-    clinicalTerm: 'Congestive heart failure',
-    colloquialSynonyms: ['scompenso cardiaco', 'insufficienza cardiaca', 'heart failure'],
-  },
-  {
-    hpoId: 'HP:0001649',
-    clinicalTerm: 'Tachycardia / Angina',
-    colloquialSynonyms: ['dolore toracico', 'batticuore', 'angina', 'chest pain'],
-  },
-  {
-    hpoId: 'HP:0001945',
-    clinicalTerm: 'Fever',
-    colloquialSynonyms: ['febbre', 'iperpiressia', 'temperatura alta', 'fever'],
-  },
-];
-
-export function computeLevenshteinDistance(firstWord: string, secondWord: string): number {
-  const source = firstWord.toLowerCase().trim();
-  const target = secondWord.toLowerCase().trim();
-  if (source === target) {
-    const identicalDistance = 0;
-    return identicalDistance;
-  }
-  const rows = source.length + 1;
-  const cols = target.length + 1;
-  const matrix: number[][] = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => 0)
-  );
-  for (let r = 0; r < rows; r += 1) {
-    matrix[r][0] = r;
-  }
-  for (let c = 0; c < cols; c += 1) {
-    matrix[0][c] = c;
-  }
-  for (let r = 1; r < rows; r += 1) {
-    for (let c = 1; c < cols; c += 1) {
-      const cost = source[r - 1] === target[c - 1] ? 0 : 1;
-      matrix[r][c] = Math.min(
-        matrix[r - 1][c] + 1,
-        matrix[r][c - 1] + 1,
-        matrix[r - 1][c - 1] + cost
-      );
-    }
-  }
-  return matrix[source.length][target.length];
-}
-
-export function lookupHpoWithSymSpell(rawInput: string): readonly HpoLexiconEntry[] {
+export async function lookupHpoWithSymSpell(rawInput: string): Promise<readonly HpoLexiconEntry[]> {
   const cleanedQuery = rawInput.toLowerCase().trim();
-  if (cleanedQuery.length < 2 || /^\d+$/.test(cleanedQuery)) {
-    const emptyMatches: readonly HpoLexiconEntry[] = [];
-    return emptyMatches;
+  if (cleanedQuery.length < 2) {
+    return [];
   }
-
-  return COLLOQUIAL_HPO_DICTIONARY.filter((entry) => {
-    if (entry.clinicalTerm.toLowerCase().includes(cleanedQuery)) {
-      return entry.hpoId.length > 0;
-    }
-    for (const synonym of entry.colloquialSynonyms) {
-      if (
-        synonym.includes(cleanedQuery) ||
-        computeLevenshteinDistance(cleanedQuery, synonym) <= 2
-      ) {
-        return entry.hpoId.length > 0;
-      }
-    }
-    const noMatch = false;
-    return noMatch;
-  });
+  try {
+    const searchResponse = await sidecarIpcClient.searchHybrid<HybridSearchResponse>(cleanedQuery);
+    return (searchResponse?.matches ?? []).map((match) => ({
+      hpoId: match.concept_id.toUpperCase().startsWith('HP:')
+        ? match.concept_id.toUpperCase()
+        : `HP:${match.concept_id.toUpperCase()}`,
+      clinicalTerm: match.title,
+      colloquialSynonyms: [match.title.toLowerCase()],
+    }));
+  } catch {
+    return [];
+  }
 }
 
 function buildRadarPolygonPoints(candidates: readonly DifferentialCandidate[]): string {
@@ -105,12 +49,17 @@ function buildRadarPolygonPoints(candidates: readonly DifferentialCandidate[]): 
 
 export interface SymptomMatcherBlockViewProps {
   readonly block: SymptomMatcherBlock;
+  readonly suggestionsOverride?: readonly HpoLexiconEntry[];
 }
 
-export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = ({ block }) => {
+export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = ({
+  block,
+  suggestionsOverride,
+}) => {
   const [symptomInput, setSymptomInput] = useState<string>('');
   const [highlightedIndex, setHighlightedIndex] = useState<number>(-1);
   const [isDropdownVisible, setIsDropdownVisible] = useState<boolean>(true);
+  const [asyncSuggestions, setAsyncSuggestions] = useState<readonly HpoLexiconEntry[]>([]);
 
   const selectedSymptoms = useMedClientStore((state) => state.selectedSymptoms);
   const toggleSymptomPolarity = useMedClientStore((state) => state.toggleSymptomPolarity);
@@ -124,7 +73,32 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
     }
   }, [block.selected_symptoms, selectedSymptoms, toggleSymptomPolarity]);
 
-  const rawSuggestions = lookupHpoWithSymSpell(symptomInput);
+  useEffect(() => {
+    let isActive = true;
+    const trimmed = symptomInput.trim();
+    if (trimmed.length < 2) {
+      setAsyncSuggestions([]);
+      return;
+    }
+
+    lookupHpoWithSymSpell(trimmed)
+      .then((results) => {
+        if (isActive) {
+          setAsyncSuggestions(results);
+        }
+      })
+      .catch(() => {
+        if (isActive) {
+          setAsyncSuggestions([]);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [symptomInput]);
+
+  const rawSuggestions = suggestionsOverride ?? asyncSuggestions;
   const triage = block.triage_telemetry;
   const radarPoints = buildRadarPolygonPoints(block.differential_candidates);
 

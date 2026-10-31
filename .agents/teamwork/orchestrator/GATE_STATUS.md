@@ -21,3 +21,15 @@
 4. Explorer 3: Test suite remediation (rewrite tests/ to import real modules) and Milestone M4 detailed architecture plan.
 5. Dispatch Worker to implement all remediations.
 6. Re-evaluate gate with Reviewer and Forensic Auditor.
+
+
+## Gate Status — Milestone M3/M4 (Iteration 2) — 2026-10-31T18:10:00Z
+| Agent | Role | Verdict | Source File | Key Findings |
+|---|---|---|---|---|
+| `critic_srs_curator_2` | teamwork_critic | AUDIT_COMPLETE | `critic_srs_curator_2/handoff.md` | Pass 4 on 7229-line SRS complete. ROA-25..34 added to AUDIT_AND_ASSUMPTIONS.md |
+| `cohesion_inspector_2` | teamwork_reviewer | REQUEST_CHANGES | `cohesion_inspector_2/handoff.md` | Fatal crash in sdui_routes (scheduler.step vs review_card), schema skew (drug_a/source_atc, name/disease_name), static fallbacks |
+| `curative_enforcer_2` | teamwork_auditor | INTEGRITY VIOLATION | `curative_enforcer_2/handoff.md` | Frontend static mock objects in AppShell, simulated substring NLI check, except pass in main.py, generic identifiers |
+| `worker_lead_remediation` | teamwork_worker | IN_PROGRESS | `worker_lead_remediation/progress.md` | Executing backend remediations, fatal crash fix, and real test suite conversions in `tests/` |
+| `worker_frontend_real_wiring` | teamwork_worker | IN_PROGRESS | `worker_frontend_real_wiring/progress.md` | Eradicating mock states in AppShell, wiring real SidecarIpcClient, delegating NLI and search to backend |
+
+Gate Result: **FAIL** (Active remediation in progress by workers)

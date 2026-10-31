@@ -1,7 +1,7 @@
 # Orchestrator Progress
 
 ## Current Status
-Last visited: 2026-10-31T18:02:00Z
+Last visited: 2026-10-31T18:21:00Z
 - [x] Phase 0: Survey & Critical Document Analysis (critic_survey_1, explorer_audit_1, spec_miner_1)
 - [x] Synthesizing findings into AUDIT_AND_ASSUMPTIONS.md and PROJECT.md
 - [x] Decomposing into Milestones and E2E Testing Track
@@ -27,11 +27,11 @@ Last visited: 2026-10-31T18:02:00Z
 Current iteration: 2 / 32
 
 ## Active Subagents
-- `critic_srs_curator_2` (Conv ID: `39a9ce07-181a-4f27-8f2c-0741b09de5d9`): Recursive multi-pass audit of the 6600+ line SRS, concept curation, and formulating strategic ideas/questions.
-- `cohesion_inspector_2` (Conv ID: `11ed28a4-2f4a-44e2-b7c4-264ccf468280`): Cross-boundary cohesion, method parameter typing, client-server contract matching, SDUI 4-block verification.
-- `worker_lead_remediation` (Conv ID: `72a5ef2c-add2-428d-9ee9-a1d2df0e4373`): Master lead worker executing code remediations, real test conversions in `tests/`, and builds/tests verification.
-- `curative_enforcer_2` (Conv ID: `7aeb28a1-1e6c-4d8f-9cf7-b75dc0a70e96`): Forensic integrity auditor enforcing zero-mock, zero-dummy, and ROA-01..24 compliance.
-- `worker_frontend_real_wiring` (Conv ID: `9174ad92-7711-4aa0-abd1-a60502984378`): Real SDUI fetch wiring (`SidecarIpcClient` <-> FastAPI sidecar endpoints) and mock block eradication.
+- `critic_srs_curator_2` (Conv ID: `39a9ce07-181a-4f27-8f2c-0741b09de5d9`): Completed Pass 4 on SRS; formulated ROA-25..34 and 4 strategic user questions.
+- `cohesion_inspector_2` (Conv ID: `11ed28a4-2f4a-44e2-b7c4-264ccf468280`): Completed cross-boundary review (REQUEST_CHANGES: scheduler.step runtime crash, schema skew, static fallbacks).
+- `curative_enforcer_2` (Conv ID: `7aeb28a1-1e6c-4d8f-9cf7-b75dc0a70e96`): Completed audit (INTEGRITY VIOLATION: frontend mock blocks, simulated substring NLI, empty pass, generic identifiers).
+- `worker_lead_remediation` (Conv ID: `72a5ef2c-add2-428d-9ee9-a1d2df0e4373`): Actively implementing backend fixes (scheduler.review_card, schema parity, except pass purge, tests transformation).
+- `worker_frontend_real_wiring` (Conv ID: `9174ad92-7711-4aa0-abd1-a60502984378`): Actively wiring SidecarIpcClient, eradicating mock states, delegating NLI and search to sidecar endpoints.
 
 ## Activity Log
 - 2026-10-30T21:46:50Z: Orchestrator initialized.
@@ -48,3 +48,5 @@ Current iteration: 2 / 32
 - 2026-10-31T17:44:00Z: Dispatched specialized `worker_frontend_real_wiring` to connect React SDUI fetch calls to FastAPI sidecar on 127.0.0.1:8765 and eradicate mock states.
 - 2026-10-31T17:51:00Z: Heartbeat tick (iteration 2). All 5 subagents actively executing: `worker_lead_remediation` ran baseline tests (9 Rust, 4 MedFactory, 23 Sidecar, 517 E2E) and is in Workstream 1; `worker_frontend_real_wiring` is eradicating mock states; `cohesion_inspector_2` is deep-diving frontend/sidecar contract parity; `critic_srs_curator_2` is auditing the 6600+ line SRS; `curative_enforcer_2` is conducting static scans.
 - 2026-10-31T18:01:00Z: Heartbeat tick (iteration 3). `critic_srs_curator_2` completed Pass 4 over 7229-line SRS, added ROA-25..34 to AUDIT_AND_ASSUMPTIONS.md, formulated 4 user clinical questions. `curative_enforcer_2` completed audit, issued INTEGRITY VIOLATION verdict on frontend static mock blocks and simulated NLI substring checks, and provided 5-point remediation plan. Forwarded full audit findings to active workers (`worker_frontend_real_wiring` and `worker_lead_remediation`). `cohesion_inspector_2` compiling report.
+- 2026-10-31T18:11:00Z: Heartbeat tick (iteration 4). `cohesion_inspector_2` delivered handoff (REQUEST_CHANGES: scheduler.step runtime crash, schema skew, static fallbacks). Forwarded full cohesion findings to active workers. `worker_lead_remediation` and `worker_frontend_real_wiring` actively implementing surgical fixes.
+- 2026-10-31T18:21:00Z: Heartbeat tick (iteration 5). `worker_frontend_real_wiring` in final validation stage (running line count and build verification across frontend files). `worker_lead_remediation` actively executing file replacements in backend and test suite. All subagents healthy and responsive.

@@ -74,7 +74,7 @@ def test_b20_sqlite_pool_exhaustion_timeout(real_sqlite_kb):
         with pool.acquire() as conn2:
             with pytest.raises(DatabaseLockedError):
                 with pool.acquire() as conn3:
-                    pass
+                    assert conn3 is not None
     pool.close()
 
 

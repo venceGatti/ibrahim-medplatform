@@ -108,3 +108,25 @@ Gli audit di `curative_enforcer_2` e `critic_srs_curator_2` hanno evidenziato i 
 Esegui la suite `pytest medclient/sidecar-python/tests -v` per confermare che tutti i test passino senza regressioni.
 
 **Action**: Applica queste rifiniture nei file backend.
+
+
+## 2026-10-31T18:09:12Z
+**Context**: Rilievi Critici di Coesione e Runtime Crash da `cohesion_inspector_2`.
+
+**Content**:
+L'ispettore di coesione ha rilevato errori fatali e disallineamenti di schema nel backend da risolvere immediatamente:
+
+1. **FATAL RUNTIME CRASH in `medclient/sidecar-python/src/api/sdui_routes.py` (righe 198 e 223)**:
+   Gli endpoint `/api/v3/exam/evaluate` e `/api/v3/fsrs/schedule` invocano `scheduler.step(...)`. La classe `FSRSScheduler` NON possiede il metodo `step`, bensì `review_card(...)`. Entrambi gli endpoint vanno in crash con `AttributeError: 'FSRSScheduler' object has no attribute 'step'`.
+   -> Correggi immediatamente la chiamata in `scheduler.review_card(...)` con la corretta firma dei parametri.
+
+2. **Disallineamento Firme e Schemi SDUI**:
+   - In `/api/v3/pharma/evaluate`: attualmente `patient_id` è un parametro di query string anziché far parte del body JSON. Crea/usa un modello Pydantic rigido di request body:
+     `class PharmaEvaluationRequest(BaseModel): patient_id: str; prescribed_atc_codes: List[str]; ...`
+   - In `DrugInteractionRecord`: il backend emette `source_atc`, `target_atc`, `severity`, `mechanism`. Fai sì che emetta anche o supporti `drug_a`, `drug_b`, `level`, `mechanism` (o alias) per allinearsi al frontend React.
+   - In `DifferentialCandidate`: il backend emette `disease_name` e `posterior_probability`. Aggiungi o supporta anche `name` e `probability` per evitare che il frontend legga `undefined`.
+
+3. **Riscrittura Test F41-F48 in `tests/`**:
+   Riscrivi `test_f41_f44_frontend_views_store.py` e `test_f45_f48_frontend_blocks_canvas.py` affinché importino i modelli ed esecutori reali (`SDUISerializer`, `sdui_models`, ecc.) eliminando asserzioni tautologiche su stringhe fittizie.
+
+**Action**: Implementa queste correzioni nel backend sidecar e nei test e verifica che la test suite passi al 100%.

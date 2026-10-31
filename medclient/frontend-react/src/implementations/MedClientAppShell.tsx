@@ -3,12 +3,6 @@ import { Globe, Power } from 'lucide-react';
 import { resolveCanonicalBlockType } from '../base/sduiRegistry';
 import { useMedClientStore } from '../base/useMedClientStore';
 import type { ActiveTabIdentifier } from '../interfaces/engineContracts';
-import type {
-  ClinicalSheetBlock,
-  DrugSafetyBlock,
-  ExamSimulatorBlock,
-  SymptomMatcherBlock,
-} from '../interfaces/sduiContracts';
 import { ClinicalSheetBlockView } from './ClinicalSheetBlockView';
 import { DrugSafetyBlockView } from './DrugSafetyBlockView';
 import { ExamSimulatorBlockView } from './ExamSimulatorBlockView';
@@ -324,11 +318,20 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-clinical_sheet"
           >
-            <ClinicalSheetBlockView
-              block={liveClinicalSheet ?? DEFAULT_CLINICAL_SHEET}
-              scrollTopPx={tabScrollOffsets.clinical_sheet}
-              onScrollOffsetChange={(offset) => setTabScrollOffset('clinical_sheet', offset)}
-            />
+            {liveClinicalSheet ? (
+              <ClinicalSheetBlockView
+                block={liveClinicalSheet}
+                scrollTopPx={tabScrollOffsets.clinical_sheet}
+                onScrollOffsetChange={(offset) => setTabScrollOffset('clinical_sheet', offset)}
+              />
+            ) : (
+              <SidecarStatusView
+                title="Monografia Clinica (/api/v3/sheets)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void fetchClinicalSheet('SHEET_STEMI_01')}
+              />
+            )}
           </div>
 
           <div
@@ -337,7 +340,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-symptom_matcher"
           >
-            <SymptomMatcherBlockView block={liveSymptomMatcher ?? DEFAULT_SYMPTOM_MATCHER} />
+            {liveSymptomMatcher ? (
+              <SymptomMatcherBlockView block={liveSymptomMatcher} />
+            ) : (
+              <SidecarStatusView
+                title="Diagnosi Differenziale (/api/v3/engine/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void evaluateDifferentialDiagnosis()}
+              />
+            )}
           </div>
 
           <div
@@ -346,7 +358,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-drug_safety"
           >
-            <DrugSafetyBlockView block={liveDrugSafety ?? DEFAULT_DRUG_SAFETY} />
+            {liveDrugSafety ? (
+              <DrugSafetyBlockView block={liveDrugSafety} />
+            ) : (
+              <SidecarStatusView
+                title="Sicurezza Farmacologica (/api/v3/pharma/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void evaluatePharmacologySafety()}
+              />
+            )}
           </div>
 
           <div
@@ -355,7 +376,16 @@ export const MedClientAppShell: React.FC = () => {
             }`}
             data-testid="dom-retained-view-exam_simulator"
           >
-            <ExamSimulatorBlockView block={liveExamBlock ?? DEFAULT_EXAM_BLOCK} />
+            {liveExamBlock ? (
+              <ExamSimulatorBlockView block={liveExamBlock} />
+            ) : (
+              <SidecarStatusView
+                title="Simulatore Esami (/api/v3/exam/evaluate)"
+                isLoading={isSidecarLoading}
+                errorMessage={sidecarErrorMessage}
+                onRetry={() => void submitExamEvaluation('MCQ', 1)}
+              />
+            )}
           </div>
         </ClinicalViewErrorBoundary>
       </main>

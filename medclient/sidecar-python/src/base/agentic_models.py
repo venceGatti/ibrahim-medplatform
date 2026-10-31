@@ -1,6 +1,6 @@
 """Pydantic V2 models for Agentic API endpoints."""
 from typing import Dict, Any, Optional
-from pydantic import BaseModel, Field, ConfigDict, AliasChoices
+from pydantic import BaseModel, Field, ConfigDict, model_validator, model_serializer
 
 
 class AgentHealthResponse(BaseModel):
@@ -31,23 +31,37 @@ class AgentExecuteRequest(BaseModel):
     action_type: str = Field(description="Action name, e.g. 'EVALUATE_DIAGNOSTIC'")
     action_parameters: Dict[str, Any] = Field(
         default_factory=dict,
-        validation_alias=AliasChoices("action_parameters", "payload"),
-        serialization_alias="action_parameters",
         description="Typed parameters for the action",
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def populate_action_parameters(cls, action_parameters: Any) -> Any:
+        if isinstance(action_parameters, dict):
+            if "payload" in action_parameters and "action_parameters" not in action_parameters:
+                normalized_map = dict(action_parameters)
+                normalized_map["action_parameters"] = normalized_map.pop("payload")
+                return normalized_map
+        return action_parameters
 
 
 class AgentExecuteResponse(BaseModel):
     """Action execution outcome envelope."""
-    model_config = ConfigDict(frozen=True, populate_by_name=True)
+    model_config = ConfigDict(frozen=False, populate_by_name=True)
 
     success: bool
     action_type: str
     execution_outcome: Dict[str, Any] = Field(
         default_factory=dict,
-        validation_alias=AliasChoices("execution_outcome", "result"),
-        serialization_alias="execution_outcome",
         description="Execution outcome dictionary",
     )
     error_message: Optional[str] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_outcome_envelope(self, serializer_handler: Any) -> Dict[str, Any]:
+        serialized_envelope = serializer_handler(self)
+        if "execution_outcome" in serialized_envelope:
+            serialized_envelope["result"] = serialized_envelope["execution_outcome"]
+        return serialized_envelope
+
 
