@@ -265,6 +265,11 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
           block_type: 'SymptomMatcherBlock',
           differential_candidates: [],
           selected_symptoms: [],
+          nbq: {
+            question_id: 'Q_HPO_01',
+            text: 'Presenza di tosse stizzosa?',
+            information_gain_bits: 0.85,
+          },
         }}
       />
     );
