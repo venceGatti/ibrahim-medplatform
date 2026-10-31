@@ -31,35 +31,39 @@ export const COLLOQUIAL_HPO_DICTIONARY: readonly HpoLexiconEntry[] = [
   },
 ];
 
+// ⚡ Bolt Optimization: Replace O(N*M) space matrix with two O(min(N, M)) typed arrays for faster Levenshtein calculation
 export function computeLevenshteinDistance(firstWord: string, secondWord: string): number {
   const source = firstWord.toLowerCase().trim();
   const target = secondWord.toLowerCase().trim();
   if (source === target) {
-    const identicalDistance = 0;
-    return identicalDistance;
+    return 0;
   }
-  const rows = source.length + 1;
-  const cols = target.length + 1;
-  const matrix: number[][] = Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => 0)
-  );
-  for (let r = 0; r < rows; r += 1) {
-    matrix[r][0] = r;
+  if (source.length === 0) return target.length;
+  if (target.length === 0) return source.length;
+
+  if (source.length < target.length) {
+    return computeLevenshteinDistance(target, source);
   }
-  for (let c = 0; c < cols; c += 1) {
-    matrix[0][c] = c;
+
+  let v0 = new Int32Array(target.length + 1);
+  let v1 = new Int32Array(target.length + 1);
+
+  for (let i = 0; i <= target.length; i++) {
+    v0[i] = i;
   }
-  for (let r = 1; r < rows; r += 1) {
-    for (let c = 1; c < cols; c += 1) {
-      const cost = source[r - 1] === target[c - 1] ? 0 : 1;
-      matrix[r][c] = Math.min(
-        matrix[r - 1][c] + 1,
-        matrix[r][c - 1] + 1,
-        matrix[r - 1][c - 1] + cost
-      );
+
+  for (let i = 0; i < source.length; i++) {
+    v1[0] = i + 1;
+    for (let j = 0; j < target.length; j++) {
+      const cost = source[i] === target[j] ? 0 : 1;
+      v1[j + 1] = Math.min(v1[j] + 1, v0[j + 1] + 1, v0[j] + cost);
     }
+    const temp = v0;
+    v0 = v1;
+    v1 = temp;
   }
-  return matrix[source.length][target.length];
+
+  return v0[target.length];
 }
 
 export function lookupHpoWithSymSpell(rawInput: string): readonly HpoLexiconEntry[] {
