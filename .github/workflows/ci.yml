@@ -28,7 +28,7 @@ jobs:
 
       - name: Run MedFactory Tests
         run: |
-          pytest medfactory/tests -v
+          PYTHONPATH=. pytest medfactory/tests -v
 
       - name: Run Python Sidecar Tests
         run: |
