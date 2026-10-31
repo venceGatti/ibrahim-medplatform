@@ -1,4 +1,5 @@
 import React from 'react';
+import { Globe, Power } from 'lucide-react';
 import { resolveCanonicalBlockType } from '../base/sduiRegistry';
 import { useMedClientStore } from '../base/useMedClientStore';
 import type { ActiveTabIdentifier } from '../interfaces/engineContracts';
@@ -172,6 +173,52 @@ export const MedClientAppShell: React.FC = () => {
   const ipcConnectionStatus = useMedClientStore((state) => state.ipcConnectionStatus);
   const tabScrollOffsets = useMedClientStore((state) => state.tabScrollOffsets);
   const setTabScrollOffset = useMedClientStore((state) => state.setTabScrollOffset);
+  const [isShutDown, setIsShutDown] = React.useState(false);
+
+  const handleShutdown = async () => {
+    if (!window.confirm('Vuoi arrestare MedPlatform e terminare tutti i servizi?')) {
+      return;
+    }
+    try {
+      await fetch('http://127.0.0.1:8765/agent/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Tauri-IPC-Secret': 'medclient_local_session_secure_token',
+        },
+        body: JSON.stringify({
+          action_type: 'SHUTDOWN_SERVER',
+          action_parameters: {},
+        }),
+      });
+    } catch {
+      // Process exits quickly causing expected network abort
+    }
+    setIsShutDown(true);
+    setTimeout(() => {
+      window.close();
+    }, 1200);
+  };
+
+  const handleOpenBrowser = () => {
+    window.open('http://localhost:5173', '_blank');
+  };
+
+  if (isShutDown) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-slate-950 p-6 text-center text-white">
+        <div className="max-w-md rounded-xl border border-slate-800 bg-slate-900/90 p-8 shadow-2xl">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-red-700/50 bg-red-950/60 text-red-400">
+            <Power className="h-7 w-7" />
+          </div>
+          <h2 className="text-xl font-bold">MedPlatform Arrestata</h2>
+          <p className="mt-2 text-sm text-slate-400">
+            I servizi locali e i motori clinici sono stati arrestati con successo. Puoi chiudere questa scheda.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100" data-testid="medclient-app-shell">
@@ -205,6 +252,30 @@ export const MedClientAppShell: React.FC = () => {
             >
               {ipcConnectionStatus}
             </span>
+
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-800">
+              <button
+                type="button"
+                onClick={handleOpenBrowser}
+                title="Apri nuova visualizzazione nel Browser Web"
+                className="flex items-center gap-1.5 rounded border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-xs font-semibold text-slate-200 hover:border-slate-500 hover:bg-slate-700 hover:text-white transition"
+                data-testid="header-open-browser-btn"
+              >
+                <Globe className="h-3.5 w-3.5 text-blue-400" />
+                <span>Apri Web</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleShutdown}
+                title="Arresta tutti i servizi MedPlatform"
+                className="flex items-center gap-1.5 rounded border border-red-900/60 bg-red-950/40 px-2.5 py-1 text-xs font-semibold text-red-300 hover:border-red-700 hover:bg-red-900/60 hover:text-white transition"
+                data-testid="header-shutdown-btn"
+              >
+                <Power className="h-3.5 w-3.5 text-red-400" />
+                <span>Spegni</span>
+              </button>
+            </div>
           </div>
         </div>
 

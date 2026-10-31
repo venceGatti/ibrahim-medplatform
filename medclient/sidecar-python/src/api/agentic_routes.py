@@ -179,6 +179,11 @@ def execute_agent_action(
             resolved_term = inv_dict.resolve_colloquial(action_parameter_map.get("phrase", ""))
             return AgentExecuteResponse(success=True, action_type=action_type, execution_outcome={"resolved": resolved_term})
 
+        elif action_type == "SHUTDOWN_SERVER":
+            import threading
+            threading.Timer(0.3, lambda: os._exit(0)).start()
+            return AgentExecuteResponse(success=True, action_type=action_type, execution_outcome={"status": "SHUTTING_DOWN"})
+
         else:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -209,6 +214,7 @@ def get_agent_schema(request: Request, x_tauri_ipc_secret: Optional[str] = Heade
             "EVALUATE_CPIC",
             "SPELLCHECK",
             "RESOLVE_COLLOQUIAL",
+            "SHUTDOWN_SERVER",
         ],
         "openapi": request.app.openapi(),
     }
