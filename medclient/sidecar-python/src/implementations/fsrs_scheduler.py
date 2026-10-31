@@ -78,6 +78,25 @@ class FSRSScheduler(IFSRSScheduler):
             target_exam_date=target_exam_val,
         )
 
+    def step(self, review_input: FSRSReviewInput) -> ReviewResultDict:
+        """Compatibility adapter executing review_card from an FSRSReviewInput model."""
+        card_instance = FSRSCardBase(
+            concept_uid="concept_card",
+            stability=review_input.stability,
+            difficulty=review_input.difficulty,
+            elapsed_days=review_input.elapsed_days,
+            scheduled_days=0.0,
+            reps=review_input.reps,
+            lapses=review_input.lapses,
+            state=FSRSStateEnum.REVIEW,
+            last_review=datetime.now(timezone.utc),
+            due_date=datetime.now(timezone.utc),
+            retrievability=1.0,
+            criticality_weight=1.0,
+        )
+        grade_enum = FSRSReviewGrade(review_input.rating)
+        return self.review_card(card_instance, grade_enum)
+
     def calculate_retrievability(self, elapsed_days: float, stability: float) -> float:
         """Calculate memory retrievability probability R(t, S)."""
         if stability <= 0.0:

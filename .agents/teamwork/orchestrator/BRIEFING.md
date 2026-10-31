@@ -81,12 +81,12 @@ Orchestrate autonomous construction, multi-pass curation, and critical analysis 
 | critic_srs_curator_2 | teamwork_critic | SRS Multi-Pass Audit & User Concepts Curation | completed | 39a9ce07-181a-4f27-8f2c-0741b09de5d9 |
 | worker_lead_remediation | teamwork_worker | Master Construction, Remediation & Test Verification | in-progress | 72a5ef2c-add2-428d-9ee9-a1d2df0e4373 |
 | curative_enforcer_2 | teamwork_auditor | Forensic Integrity & Dogma Audit | completed | 7aeb28a1-1e6c-4d8f-9cf7-b75dc0a70e96 |
-| worker_frontend_real_wiring | teamwork_worker | Real SDUI Fetch Wiring & Mock Purge | in-progress | 9174ad92-7711-4aa0-abd1-a60502984378 |
+| worker_frontend_real_wiring | teamwork_worker | Real SDUI Fetch Wiring & Mock Purge | completed | 9174ad92-7711-4aa0-abd1-a60502984378 |
 
 ## Succession Status
 - Succession required: pending subagents completion
 - Spawn count: 19 / 16
-- Pending subagents: 72a5ef2c-add2-428d-9ee9-a1d2df0e4373, 9174ad92-7711-4aa0-abd1-a60502984378
+- Pending subagents: 72a5ef2c-add2-428d-9ee9-a1d2df0e4373
 - Predecessor: none
 - Successor: not yet spawned
 

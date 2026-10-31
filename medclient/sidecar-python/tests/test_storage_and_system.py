@@ -206,3 +206,118 @@ def test_user_state_store_strict_schema_and_operations():
         if os.path.exists(db_path):
             os.remove(db_path)
 
+
+def test_sdui_pharma_evaluate_endpoint_body_and_frontend_parity():
+    """Verify /api/v3/pharma/evaluate accepts body models and emits frontend parity fields."""
+    token = "auth-token-pharma-test"
+    app = create_app(ipc_token=token)
+    client = TestClient(app)
+    headers = {"X-Tauri-IPC-Secret": token}
+
+    # 1. Full JSON body matching PharmaEvaluationRequest
+    evaluation_body = {
+        "patient_id": "PATIENT_LOCAL_01",
+        "prescribed_drugs": [
+            {
+                "atc_code": "B01AC04",
+                "inn_name": "Clopidogrel",
+                "single_dose_mg": 75.0,
+                "daily_dose_mg": 75.0,
+                "is_prodrug": True,
+            },
+            {
+                "atc_code": "A02BC01",
+                "inn_name": "Omeprazole",
+                "single_dose_mg": 20.0,
+                "daily_dose_mg": 20.0,
+            },
+        ],
+        "age": 65,
+        "is_female": False,
+        "serum_creatinine_mg_dl": 1.2,
+        "serum_potassium_meq_l": 4.3,
+    }
+    res = client.post("/api/v3/pharma/evaluate", json=evaluation_body, headers=headers)
+    assert res.status_code == 200
+    res_json = res.json()
+    assert res_json["block_type"] == "DrugSafetyBlock"
+    assert res_json["egfr"] > 0
+    assert "cyp_clearance" in res_json
+    assert "interactions" in res_json
+    assert "alerts" in res_json
+
+    # Verify frontend parity fields in interactions
+    for interaction_entry in res_json["interactions"]:
+        assert "drug_a" in interaction_entry
+        assert "drug_b" in interaction_entry
+        assert "level" in interaction_entry
+        assert "mechanism" in interaction_entry
+        assert "source_atc" in interaction_entry
+        assert "target_atc" in interaction_entry
+
+    # Verify frontend parity fields in alerts
+    for alert_entry in res_json["alerts"]:
+        assert "code" in alert_entry
+        assert "severity" in alert_entry
+        assert "title" in alert_entry
+
+    # 2. Body with prescribed_atc_codes convenience list
+    atc_body = {
+        "patient_id": "PATIENT_LOCAL_02",
+        "prescribed_atc_codes": ["B01AC04", "A02BC01"],
+        "age": 55,
+        "is_female": True,
+    }
+    res_atc = client.post("/api/v3/pharma/evaluate", json=atc_body, headers=headers)
+    assert res_atc.status_code == 200
+    assert res_atc.json()["block_type"] == "DrugSafetyBlock"
+
+
+def test_sdui_exam_evaluate_and_fsrs_schedule_endpoints():
+    """Verify /api/v3/exam/evaluate and /api/v3/fsrs/schedule execute without method crash."""
+    token = "auth-token-exam-test"
+    app = create_app(ipc_token=token)
+    client = TestClient(app)
+    headers = {"X-Tauri-IPC-Secret": token}
+
+    # 1. /api/v3/exam/evaluate with MCQ and FSRS card state
+    exam_body = {
+        "item_type": "MCQ",
+        "item_data": {
+            "question_id": "Q_CARDIO_01",
+            "stem": "First-line therapy for anaphylaxis?",
+            "options": ["Adrenaline IM", "Antihistamine IV", "Steroids PO", "Salbutamol"],
+            "correct_index": 0,
+        },
+        "user_selection": 0,
+        "fsrs_card_state": {
+            "concept_uid": "concept_anaphylaxis_01",
+            "stability": 2.5,
+            "difficulty": 4.5,
+            "reps": 1,
+            "lapses": 0,
+        },
+    }
+    res_exam = client.post("/api/v3/exam/evaluate", json=exam_body, headers=headers)
+    assert res_exam.status_code == 200
+    exam_json = res_exam.json()
+    assert exam_json["block_type"] == "ExamSimulatorBlock"
+    assert exam_json["item_data"]["evaluation_outcome"]["is_correct"] is True
+    assert exam_json["fsrs_card_state"] is not None
+    assert "stability" in exam_json["fsrs_card_state"]
+
+    # 2. /api/v3/fsrs/schedule
+    fsrs_body = {
+        "concept_uid": "concept_anaphylaxis_01",
+        "rating": 3,
+        "review_time": "2026-10-31T12:00:00Z",
+        "time_taken_ms": 3200,
+        "desired_retention": 0.90,
+    }
+    res_fsrs = client.post("/api/v3/fsrs/schedule", json=fsrs_body, headers=headers)
+    assert res_fsrs.status_code == 200
+    fsrs_json = res_fsrs.json()
+    assert "card_state" in fsrs_json
+    assert fsrs_json["card_state"]["stability"] > 0
+    assert fsrs_json["interval_days"] >= 1
+

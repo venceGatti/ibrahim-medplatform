@@ -168,3 +168,4 @@ def run_curator() -> None:
 
 if __name__ == "__main__":
     run_curator()
+
