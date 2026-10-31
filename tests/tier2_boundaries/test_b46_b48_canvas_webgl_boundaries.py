@@ -16,45 +16,45 @@ from tests.conftest import (
 @pytest.mark.tier2
 def test_b46_exam_simulator_unknown_item_type():
     """Verify unknown item_type string is preserved or checked."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "UNKNOWN_TYPE",
         "item_data": {},
         "fsrs_card_state": {}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.item_type == "UNKNOWN_TYPE"
 
 
 @pytest.mark.tier2
 def test_b46_exam_simulator_missing_item_data_raises_error():
     """Verify missing item_data triggers ValidationError."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "MCQ",
         "fsrs_card_state": {}
     }
     with pytest.raises(ValidationError):
-        ExamSimulatorBlockContract.model_validate(payload)
+        ExamSimulatorBlockContract.model_validate(sdui_payload)
 
 
 @pytest.mark.tier2
 def test_b46_exam_simulator_empty_fsrs_state():
     """Verify empty fsrs_card_state is accepted for unreviewed items."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "MCQ",
         "item_data": {"q": "text"},
         "fsrs_card_state": {}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.fsrs_card_state == {}
 
 
 @pytest.mark.tier2
 def test_b46_exam_simulator_forbidden_extra_field():
     """Verify extra attributes are rejected."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "MCQ",
         "item_data": {},
@@ -62,20 +62,20 @@ def test_b46_exam_simulator_forbidden_extra_field():
         "unauthorized": True
     }
     with pytest.raises(ValidationError):
-        ExamSimulatorBlockContract.model_validate(payload)
+        ExamSimulatorBlockContract.model_validate(sdui_payload)
 
 
 @pytest.mark.tier2
 def test_b46_exam_simulator_complex_nested_item_data():
     """Verify item_data handles deeply nested graph dictionaries."""
     nested = {"graph": {"nodes": [{"id": 1, "edges": [2, 3]}]}}
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "DAG_SCENARIO",
         "item_data": nested,
         "fsrs_card_state": {"s": 1.0}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert "graph" in block.item_data
 
 

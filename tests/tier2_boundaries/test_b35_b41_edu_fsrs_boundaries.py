@@ -11,6 +11,13 @@ Tier 2: Boundary & Corner Case Tests for Educational Engine Features 35 through 
 
 import math
 import pytest
+from pydantic import ValidationError
+from medclient.sidecar_python.src.base.educational_models import (
+    AtomicConcept,
+    PatientVitals,
+    FSRSCardBase,
+    FSRSReviewGrade,
+)
 from tests.conftest import (
     point_in_polygon_even_odd,
     fsrs_calculate_retrievability,
@@ -111,9 +118,9 @@ def test_b37_nli_identical_premise_and_hypothesis():
 
 @pytest.mark.tier2
 def test_b37_nli_empty_hypothesis_rejected():
-    """Verify empty hypothesis string fails evaluation."""
-    hypothesis = ""
-    assert len(hypothesis.strip()) == 0
+    """Verify empty hypothesis string fails evaluation via AtomicConcept schema."""
+    with pytest.raises(ValidationError):
+        AtomicConcept(id="concept_empty", hypothesis="", weight=1.0)
 
 
 @pytest.mark.tier2
@@ -160,10 +167,9 @@ def test_b38_dag_terminal_node_has_zero_outgoing():
 
 @pytest.mark.tier2
 def test_b38_dag_negative_vital_values_prevented():
-    """Verify vital sign transition cannot set negative blood pressure or HR."""
-    new_hr = -10
-    clamped_hr = max(0, new_hr)
-    assert clamped_hr == 0
+    """Verify vital sign transition cannot set negative blood pressure or HR via PatientVitals."""
+    with pytest.raises(ValidationError):
+        PatientVitals(map_mmHg=70.0, hr_bpm=-10.0, rr_bpm=16.0, spo2_percent=98.0, gcs=15)
 
 
 @pytest.mark.tier2
@@ -208,18 +214,16 @@ def test_b39_fsrs_ten_years_elapsed_retrievability():
 
 @pytest.mark.tier2
 def test_b39_fsrs_difficulty_clamped_lower_bound():
-    """Verify difficulty below 1.0 is clamped to 1.0."""
-    raw_d = 0.4
-    clamped_d = max(1.0, min(10.0, raw_d))
-    assert clamped_d == 1.0
+    """Verify difficulty below 1.0 is rejected by FSRSCardBase schema."""
+    with pytest.raises(ValidationError):
+        FSRSCardBase(concept_uid="c1", difficulty=0.4)
 
 
 @pytest.mark.tier2
 def test_b39_fsrs_invalid_rating_rejected():
-    """Verify rating outside 1..4 (e.g. 5 or 0) is rejected."""
-    rating = 5
-    is_valid_rating = rating in {1, 2, 3, 4}
-    assert is_valid_rating is False
+    """Verify rating outside 1..4 (e.g. 5 or 0) is rejected by FSRSReviewGrade enum."""
+    with pytest.raises(ValueError):
+        FSRSReviewGrade(5)
 
 
 # ---------------------------------------------------------------------------

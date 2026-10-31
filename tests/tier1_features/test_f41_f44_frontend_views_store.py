@@ -123,15 +123,15 @@ def test_f42_zustand_subscriber_notification():
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f43_clinical_sheet_pydantic_contract():
-    """Verify ClinicalSheetBlock payload satisfies schema contract."""
-    payload = {
+    """Verify ClinicalSheetBlock sdui_payload satisfies schema contract."""
+    sdui_payload = {
         "block_type": "ClinicalSheetBlock",
         "sheet_id": "SHEET_STEMI_01",
         "title": "ST-Elevation Myocardial Infarction",
         "content_markdown": "# Clinical Presentation\nSevere retrosternal pain.",
         "callouts": [{"severity": "CRITICAL", "message": "Immediate catheterization laboratory activation."}]
     }
-    block = ClinicalSheetBlockContract.model_validate(payload)
+    block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert block.block_type == "ClinicalSheetBlock"
     assert block.sheet_id == "SHEET_STEMI_01"
 
@@ -161,28 +161,28 @@ def test_f43_clinical_sheet_callout_severity_classes():
 @pytest.mark.tier1
 def test_f43_clinical_sheet_empty_callouts_allowed():
     """Verify sheets with zero callouts remain valid."""
-    payload = {
+    sdui_payload = {
         "block_type": "ClinicalSheetBlock",
         "sheet_id": "SHEET_ANATOMY_01",
         "title": "Coronary Anatomy",
         "content_markdown": "Normal anatomy of LAD and RCA.",
         "callouts": []
     }
-    block = ClinicalSheetBlockContract.model_validate(payload)
+    block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert len(block.callouts) == 0
 
 
 @pytest.mark.tier1
 def test_f43_clinical_sheet_title_non_empty():
     """Verify title is non-empty string."""
-    payload = {
+    sdui_payload = {
         "block_type": "ClinicalSheetBlock",
         "sheet_id": "SHEET_01",
         "title": "Valid Title",
         "content_markdown": "Content",
         "callouts": []
     }
-    block = ClinicalSheetBlockContract.model_validate(payload)
+    block = ClinicalSheetBlockContract.model_validate(sdui_payload)
     assert len(block.title) > 0
 
 
@@ -191,8 +191,8 @@ def test_f43_clinical_sheet_title_non_empty():
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f44_symptom_matcher_pydantic_contract():
-    """Verify SymptomMatcherBlock payload satisfies schema contract."""
-    payload = {
+    """Verify SymptomMatcherBlock sdui_payload satisfies schema contract."""
+    sdui_payload = {
         "block_type": "SymptomMatcherBlock",
         "differential_candidates": [
             {"disease_id": "D1", "name": "STEMI", "probability": 0.85}
@@ -200,7 +200,7 @@ def test_f44_symptom_matcher_pydantic_contract():
         "selected_symptoms": ["HP:0001635"],
         "nbq": {"question_id": "Q_ECG", "text": "Is there ST elevation?"}
     }
-    block = SymptomMatcherBlockContract.model_validate(payload)
+    block = SymptomMatcherBlockContract.model_validate(sdui_payload)
     assert block.block_type == "SymptomMatcherBlock"
     assert len(block.differential_candidates) == 1
 

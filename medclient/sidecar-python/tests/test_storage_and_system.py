@@ -23,8 +23,8 @@ def test_reverse_watchdog_lifecycle():
 
 def test_sqlite_wal_pool():
     """Verify connection pool acquires WAL connections and maintains stats."""
-    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tf:
-        db_path = tf.name
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as sqlite_file_descriptor:
+        db_path = sqlite_file_descriptor.name
 
     try:
         # Initialize schema
@@ -55,10 +55,10 @@ def test_sqlite_wal_pool():
 
 def test_blue_green_atomic_swap():
     """Verify atomic pointer swap between blue and green database slots."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        pointer_path = os.path.join(tmpdir, "active_db.json")
-        blue_db = os.path.join(tmpdir, "master_blue.sqlite")
-        green_db = os.path.join(tmpdir, "master_green.sqlite")
+    with tempfile.TemporaryDirectory() as sandbox_directory:
+        pointer_path = os.path.join(sandbox_directory, "active_db.json")
+        blue_db = os.path.join(sandbox_directory, "master_blue.sqlite")
+        green_db = os.path.join(sandbox_directory, "master_green.sqlite")
 
         # Create both databases with tables
         for db in [blue_db, green_db]:
@@ -135,8 +135,8 @@ def test_user_state_store_strict_schema_and_operations():
     """Verify UserStateStore creates strictly typed tables in WAL mode and supports complete lifecycle (ROA-13, ROA-20)."""
     from src.implementations.user_state_store import UserStateStore
 
-    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as tf:
-        db_path = tf.name
+    with tempfile.NamedTemporaryFile(suffix=".sqlite", delete=False) as sqlite_file_descriptor:
+        db_path = sqlite_file_descriptor.name
 
     try:
         store = UserStateStore(db_path)

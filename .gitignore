@@ -35,3 +35,4 @@ medclient/frontend-react/dist/
 *.db-shm
 user_state.sqlite-wal
 user_state.sqlite-shm
+

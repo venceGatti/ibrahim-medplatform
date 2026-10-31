@@ -16,8 +16,8 @@ from tests.conftest import (
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f45_drug_safety_pydantic_contract():
-    """Verify DrugSafetyBlock payload satisfies schema contract."""
-    payload = {
+    """Verify DrugSafetyBlock sdui_payload satisfies schema contract."""
+    sdui_payload = {
         "block_type": "DrugSafetyBlock",
         "interactions": [
             {"drug_a": "Clopidogrel", "drug_b": "Omeprazole", "level": 1, "mechanism": "CYP2C19 inhibition"}
@@ -26,7 +26,7 @@ def test_f45_drug_safety_pydantic_contract():
         "alerts": [{"code": "BLACKBOX_INEFFICACY", "severity": 1}],
         "egfr": 75.0
     }
-    block = DrugSafetyBlockContract.model_validate(payload)
+    block = DrugSafetyBlockContract.model_validate(sdui_payload)
     assert block.block_type == "DrugSafetyBlock"
     assert len(block.interactions) == 1
     assert block.egfr == 75.0
@@ -66,14 +66,14 @@ def test_f45_drug_safety_renal_color_coding():
 @pytest.mark.tier1
 def test_f45_drug_safety_zero_interactions_clean_state():
     """Verify zero interactions yields clean state with empty alerts list."""
-    payload = {
+    sdui_payload = {
         "block_type": "DrugSafetyBlock",
         "interactions": [],
         "cyp_clearance": {"CYP3A4": 1.0},
         "alerts": [],
         "egfr": 95.0
     }
-    block = DrugSafetyBlockContract.model_validate(payload)
+    block = DrugSafetyBlockContract.model_validate(sdui_payload)
     assert len(block.interactions) == 0
     assert len(block.alerts) == 0
 
@@ -83,14 +83,14 @@ def test_f45_drug_safety_zero_interactions_clean_state():
 # ---------------------------------------------------------------------------
 @pytest.mark.tier1
 def test_f46_exam_simulator_pydantic_contract():
-    """Verify ExamSimulatorBlock payload satisfies schema contract."""
-    payload = {
+    """Verify ExamSimulatorBlock sdui_payload satisfies schema contract."""
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "MCQ",
         "item_data": {"question_id": "Q1", "options": ["A", "B", "C", "D"], "correct_index": 1},
         "fsrs_card_state": {"stability": 4.2, "difficulty": 5.0, "reps": 3}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.block_type == "ExamSimulatorBlock"
     assert block.item_type == "MCQ"
 
@@ -109,7 +109,7 @@ def test_f46_exam_simulator_aliases():
 @pytest.mark.tier1
 def test_f46_exam_simulator_hotspot_item_type():
     """Verify item_type 'IMAGE_HOTSPOT' contains svg_polygons in item_data."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "IMAGE_HOTSPOT",
         "item_data": {
@@ -118,7 +118,7 @@ def test_f46_exam_simulator_hotspot_item_type():
         },
         "fsrs_card_state": {"stability": 1.0, "difficulty": 5.0}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.item_type == "IMAGE_HOTSPOT"
     assert "image_uri" in block.item_data
 
@@ -126,26 +126,26 @@ def test_f46_exam_simulator_hotspot_item_type():
 @pytest.mark.tier1
 def test_f46_exam_simulator_dag_scenario_item_type():
     """Verify item_type 'DAG_SCENARIO' contains scenario_graph in item_data."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "DAG_SCENARIO",
         "item_data": {"scenario_id": "SCENARIO_SEPSIS_01", "current_step": "STEP_01"},
         "fsrs_card_state": {"stability": 2.5, "difficulty": 4.0}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.item_type == "DAG_SCENARIO"
 
 
 @pytest.mark.tier1
 def test_f46_exam_simulator_fsrs_state_tracking():
     """Verify fsrs_card_state contains positive stability value."""
-    payload = {
+    sdui_payload = {
         "block_type": "ExamSimulatorBlock",
         "item_type": "MCQ",
         "item_data": {"q": "test"},
         "fsrs_card_state": {"stability": 7.5, "difficulty": 3.2}
     }
-    block = ExamSimulatorBlockContract.model_validate(payload)
+    block = ExamSimulatorBlockContract.model_validate(sdui_payload)
     assert block.fsrs_card_state["stability"] > 0.0
 
 

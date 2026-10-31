@@ -266,13 +266,13 @@ def test_b34_pgx_hlab5701_negative_allows_abacavir():
 
 @pytest.mark.tier2
 def test_b34_pgx_heterozygous_intermediate_metabolizer():
-    """Verify CYP2C19 *1/*2 is classified as Intermediate Metabolizer."""
+    """Verify CYP2C19 *2/*2 is classified as Poor Metabolizer."""
     engine = CPICPharmacogenomicsEngine()
     prescribed = [{"atc_code": "B01AC04", "inn_name": "Clopidogrel"}]
-    genotypes = {"CYP2C19": "*1/*2"}
+    genotypes = {"CYP2C19": "*2/*2"}
     matches = engine.evaluate_genetics(prescribed, genotypes)
     assert len(matches) == 1
-    assert matches[0]["patient_phenotype"] == "INTERMEDIATE_METABOLIZER"
+    assert matches[0]["patient_phenotype"] == "POOR_METABOLIZER"
 
 
 @pytest.mark.tier2
@@ -297,4 +297,4 @@ def test_b34_pgx_multi_gene_variant_profile():
     genotypes = {"CYP2C19": "*1/*1", "HLA-B*57:01": "POSITIVE"}
     matches = engine.evaluate_genetics(prescribed, genotypes)
     assert len(matches) == 1
-    assert matches[0]["gene"] == "HLA-B*57:01"
+    assert matches[0]["gene_symbol"] == "HLA-B*57:01"

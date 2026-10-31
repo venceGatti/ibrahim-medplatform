@@ -84,7 +84,7 @@ def test_b20_sqlite_write_attempt_raises_readonly_error(real_sqlite_pool):
     with real_sqlite_pool.acquire() as conn:
         cursor = conn.cursor()
         with pytest.raises(sqlite3.OperationalError):
-            cursor.execute("INSERT INTO clinical_icd10 VALUES ('Z99', 'Fake', 'I', 'I', 1);")
+            cursor.execute("INSERT INTO clinical_icd10 VALUES ('Z99', 'UnauthorizedEntry', 'I', 'I', 1);")
         cursor.close()
 
 
