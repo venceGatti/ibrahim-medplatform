@@ -42,6 +42,7 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
   const [activeDagNodeId, setActiveDagNodeId] = useState<string>(
     questionSpec.current_step ?? 'STEP_01'
   );
+  const [activeMode, setActiveMode] = useState<string>(block.item_type ?? 'MCQ');
 
   useEffect(() => {
     const existingAnswer = examAnswers[questionId];
@@ -54,6 +55,15 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
       setLastClickCoords(null);
     }
   }, [questionId, examAnswers]);
+
+  const hotspotTargetPolygons: readonly (readonly NormalizedVertex2D[])[] =
+    questionSpec.target_polygons ?? [
+      [
+        [0.2, 0.2],
+        [0.6, 0.2],
+        [0.4, 0.6],
+      ],
+    ];
 
   const handleHotspotCanvasClick = (mouseEv: React.MouseEvent<HTMLDivElement>): void => {
     const rect = mouseEv.currentTarget.getBoundingClientRect();
@@ -71,14 +81,9 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
     const clampedV = Math.max(0.0, Math.min(1.0, rawV));
     setLastClickCoords([clampedU, clampedV]);
 
-    const polygons = questionSpec.target_polygons ?? [
-      [
-        [0.2, 0.2],
-        [0.6, 0.2],
-        [0.4, 0.6],
-      ],
-    ];
-    const hitAny = polygons.some((poly) => evaluateHotspotHitWithTolerance(clampedU, clampedV, poly));
+    const hitAny = hotspotTargetPolygons.some((poly) =>
+      evaluateHotspotHitWithTolerance(clampedU, clampedV, poly)
+    );
     setHotspotHitStatus(hitAny ? 'HIT' : 'MISS');
     recordExamAnswer(questionId, hitAny ? 'HOTSPOT_HIT' : 'HOTSPOT_MISS');
   };
@@ -96,29 +101,13 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
 
   const dagNodes = questionSpec.dag_nodes ?? {
     STEP_01: {
-      node_id: 'STEP_01',
-      clinical_vignette: 'Paziente ipoteso con lattati 4.8 mmol/L.',
-      heart_rate_bpm: 118,
-      systolic_bp_mmhg: 82,
-      spo2_percent: 91,
-      is_terminal: false,
-      transitions: [
-        {
-          action_id: 'ACT_FLUIDS',
-          label: 'Cristalloidi 30 mL/kg + Noradrenalina',
-          target_node_id: 'STEP_02',
-          delta_score: 50,
-        },
-      ],
+      node_id: 'STEP_01', clinical_vignette: 'Paziente ipoteso con lattati 4.8 mmol/L.',
+      heart_rate_bpm: 118, systolic_bp_mmhg: 82, spo2_percent: 91, is_terminal: false,
+      transitions: [{ action_id: 'ACT_FLUIDS', label: 'Cristalloidi 30 mL/kg + Noradrenalina', target_node_id: 'STEP_02', delta_score: 50 }],
     },
     STEP_02: {
-      node_id: 'STEP_02',
-      clinical_vignette: 'Stabilizzazione PAM > 65 mmHg ottenuta.',
-      heart_rate_bpm: 88,
-      systolic_bp_mmhg: 112,
-      spo2_percent: 97,
-      is_terminal: true,
-      transitions: [],
+      node_id: 'STEP_02', clinical_vignette: 'Stabilizzazione PAM > 65 mmHg ottenuta.',
+      heart_rate_bpm: 88, systolic_bp_mmhg: 112, spo2_percent: 97, is_terminal: true, transitions: [],
     },
   };
 
@@ -129,12 +118,29 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
       className="space-y-5 rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-md"
       data-testid="exam-simulator-block"
     >
-      <header className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
         <div>
-          <span className="rounded bg-indigo-950 px-2.5 py-0.5 text-xs font-semibold text-indigo-300">
-            Modalita Esame: {block.item_type}
-          </span>
-          <h2 className="mt-1 text-lg font-bold text-white">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-slate-400">Modalita Esame:</span>
+            <div className="flex gap-1 rounded bg-slate-950 p-0.5 border border-slate-800" data-testid="exam-mode-selector">
+              {(['MCQ', 'HOTSPOT', 'NLI_OPEN', 'DAG_SCENARIO'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => setActiveMode(mode)}
+                  className={`rounded px-2.5 py-0.5 text-xs font-semibold transition ${
+                    activeMode === mode
+                      ? 'bg-indigo-600 text-white shadow'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  data-testid={`exam-mode-btn-${mode}`}
+                >
+                  {mode}
+                </button>
+              ))}
+            </div>
+          </div>
+          <h2 className="mt-2 text-base font-bold text-white">
             {questionSpec.stem ?? 'Valutazione Clinica Interattiva'}
           </h2>
         </div>
@@ -144,7 +150,7 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
         </div>
       </header>
 
-      {block.item_type === 'MCQ' && (
+      {activeMode === 'MCQ' && (
         <div className="space-y-3" data-testid="exam-mode-mcq">
           <div className="space-y-2">
             {(questionSpec.options ?? ['A', 'B', 'C', 'D']).map((optionText, idx) => {
@@ -207,7 +213,7 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
         </div>
       )}
 
-      {(block.item_type === 'HOTSPOT' || block.item_type === 'IMAGE_HOTSPOT') && (
+      {(activeMode === 'HOTSPOT' || activeMode === 'IMAGE_HOTSPOT') && (
         <div className="space-y-3" data-testid="exam-mode-hotspot">
           <div
             onClick={handleHotspotCanvasClick}
@@ -218,26 +224,26 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
               Clicca sulla lesione anatomica ({questionSpec.image_uri ?? 'med-asset://images/cxr.webp'})
             </span>
 
-            {/* Visual Hotspot Feedback Overlay in [0,1]^2 Coordinate Space */}
-            <svg
-              className="pointer-events-none absolute inset-0 h-full w-full"
-              viewBox="0 0 1000 1000"
-              preserveAspectRatio="none"
-              data-testid="hotspot-feedback-overlay"
-            >
-              {(questionSpec.target_polygons ?? []).map((polygonVertices, polyIdx) => (
-                <polygon
-                  key={`target-poly-${polyIdx}`}
-                  points={polygonVertices
-                    .map(([vx, vy]) => `${Math.round(vx * 1000)},${Math.round(vy * 1000)}`)
-                    .join(' ')}
-                  fill="rgba(59, 130, 246, 0.08)"
-                  stroke="#3b82f6"
-                  strokeWidth="1.5"
-                  strokeDasharray="4 4"
-                  opacity={0.7}
-                />
-              ))}
+              {/* Visual Hotspot Feedback Overlay in [0,1]^2 Coordinate Space */}
+              <svg
+                className="pointer-events-none absolute inset-0 h-full w-full"
+                viewBox="0 0 1000 1000"
+                preserveAspectRatio="none"
+                data-testid="hotspot-feedback-overlay"
+              >
+                {hotspotTargetPolygons.map((polygonVertices, polyIdx) => (
+                  <polygon
+                    key={`target-poly-${polyIdx}`}
+                    points={polygonVertices
+                      .map(([vx, vy]) => `${Math.round(vx * 1000)},${Math.round(vy * 1000)}`)
+                      .join(' ')}
+                    fill="rgba(59, 130, 246, 0.08)"
+                    stroke="#3b82f6"
+                    strokeWidth="1.5"
+                    strokeDasharray="4 4"
+                    opacity={0.7}
+                  />
+                ))}
 
               {lastClickCoords && hotspotHitStatus !== 'IDLE' && (
                 <g
@@ -304,7 +310,7 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
         </div>
       )}
 
-      {block.item_type === 'NLI_OPEN' && (
+      {activeMode === 'NLI_OPEN' && (
         <div className="space-y-3" data-testid="exam-mode-nli-open">
           <textarea
             rows={3}
@@ -323,14 +329,33 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
             Verifica Entailment NLI
           </button>
           {nliPassed !== null && (
-            <p className="text-xs font-bold text-emerald-300" data-testid="nli-evaluation-outcome">
-              Esito NLI: {nliPassed ? 'ENTAILMENT CONFERMATO (>= 0.75)' : 'CONTRADDIZIONE / INCOMPLETO'}
-            </p>
+            <div
+              className={`rounded-md border p-3 text-xs font-semibold ${
+                nliPassed
+                  ? 'border-emerald-500/60 bg-emerald-950/80 text-emerald-200'
+                  : 'border-rose-500/60 bg-rose-950/80 text-rose-200'
+              }`}
+              data-testid="nli-evaluation-outcome"
+            >
+              <div className="flex items-center justify-between">
+                <span>
+                  Esito NLI: {nliPassed ? '✓ ENTAILMENT CONFERMATO (≥ 0.75)' : '✕ CONTRADDIZIONE / INCOMPLETO'}
+                </span>
+                <span className="font-mono text-[11px] uppercase tracking-wide">
+                  {nliPassed ? 'Ipotesi Conforme alle Linee Guida' : 'Revisione Clinica Richiesta'}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] font-normal text-slate-300">
+                {nliPassed
+                  ? 'La formulazione proposta copre gli elementi terapeutici essenziali descritti nella monografia.'
+                  : 'Specificare principi attivi di prima linea (es. Pantoprazolo, Noradrenalina o Cristalloidi).'}
+              </p>
+            </div>
           )}
         </div>
       )}
 
-      {block.item_type === 'DAG_SCENARIO' && currentDagNode && (
+      {activeMode === 'DAG_SCENARIO' && currentDagNode && (
         <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950 p-4" data-testid="exam-mode-dag">
           <div className="flex flex-wrap gap-3 text-xs font-mono">
             <span className="rounded bg-slate-900 px-2 py-1 text-rose-300">
