@@ -75,7 +75,7 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
   const updateRenalParameters = useMedClientStore((state) => state.updateRenalParameters);
   const activeMedications = useMedClientStore((state) => state.activeMedications);
 
-  const displayedEgfr = block.egfr ?? renalParameters.calculatedEgfr;
+  const displayedEgfr = renalParameters.calculatedEgfr ?? block.egfr;
   const egfrTheme = resolveEgfrBadgeTheme(displayedEgfr);
   const egfrScaledPercentage = Math.min(100, Math.max(0, Math.round((displayedEgfr / 120) * 100)));
   const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);

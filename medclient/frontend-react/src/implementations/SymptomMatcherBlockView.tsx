@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useMedClientStore } from '../base/useMedClientStore';
 import type { DifferentialCandidate, SymptomMatcherBlock } from '../interfaces/sduiContracts';
 
@@ -115,6 +115,14 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
   const selectedSymptoms = useMedClientStore((state) => state.selectedSymptoms);
   const toggleSymptomPolarity = useMedClientStore((state) => state.toggleSymptomPolarity);
   const removeSymptom = useMedClientStore((state) => state.removeSymptom);
+
+  useEffect(() => {
+    if (Object.keys(selectedSymptoms).length === 0 && block.selected_symptoms) {
+      block.selected_symptoms.forEach((code) => {
+        toggleSymptomPolarity(code, 'PRESENT');
+      });
+    }
+  }, [block.selected_symptoms, selectedSymptoms, toggleSymptomPolarity]);
 
   const rawSuggestions = lookupHpoWithSymSpell(symptomInput);
   const triage = block.triage_telemetry;

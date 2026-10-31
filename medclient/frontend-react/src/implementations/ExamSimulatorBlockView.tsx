@@ -145,25 +145,65 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
       </header>
 
       {block.item_type === 'MCQ' && (
-        <div className="space-y-2" data-testid="exam-mode-mcq">
-          {(questionSpec.options ?? ['A', 'B', 'C', 'D']).map((optionText, idx) => {
-            const isSelected = examAnswers[questionId] === idx;
-            return (
-              <button
-                key={`mcq-opt-${idx}`}
-                type="button"
-                onClick={() => recordExamAnswer(questionId, idx)}
-                className={`w-full rounded-lg border px-4 py-2.5 text-left text-sm transition ${
-                  isSelected
-                    ? 'border-blue-500 bg-blue-950/70 font-semibold text-white'
-                    : 'border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-700'
-                }`}
-                data-testid={`mcq-option-${idx}`}
-              >
-                {idx + 1}. {optionText}
-              </button>
-            );
-          })}
+        <div className="space-y-3" data-testid="exam-mode-mcq">
+          <div className="space-y-2">
+            {(questionSpec.options ?? ['A', 'B', 'C', 'D']).map((optionText, idx) => {
+              const selectedAnswerIdx = examAnswers[questionId];
+              const isAnswered = selectedAnswerIdx !== undefined;
+              const isSelected = selectedAnswerIdx === idx;
+              const isCorrect = idx === questionSpec.correct_index;
+              const isWrongSelection = isSelected && !isCorrect;
+
+              let buttonStyleClass =
+                'border-slate-800 bg-slate-950 text-slate-200 hover:border-slate-700';
+              if (isAnswered) {
+                if (isCorrect) {
+                  buttonStyleClass =
+                    'border-emerald-500 bg-emerald-950/70 text-emerald-100 font-semibold ring-1 ring-emerald-500';
+                } else if (isWrongSelection) {
+                  buttonStyleClass =
+                    'border-rose-600 bg-rose-950/80 text-rose-200 font-semibold ring-1 ring-rose-500';
+                } else {
+                  buttonStyleClass =
+                    'border-slate-800 bg-slate-950/40 text-slate-400 opacity-60';
+                }
+              }
+
+              return (
+                <button
+                  key={`mcq-opt-${idx}`}
+                  type="button"
+                  onClick={() => recordExamAnswer(questionId, idx)}
+                  className={`flex w-full items-center justify-between rounded-lg border px-4 py-2.5 text-left text-sm transition ${buttonStyleClass}`}
+                  data-testid={`mcq-option-${idx}`}
+                >
+                  <span>
+                    {idx + 1}. {optionText}
+                  </span>
+                  {isAnswered && isCorrect && (
+                    <span className="text-xs font-bold text-emerald-400">✓ Corretto</span>
+                  )}
+                  {isAnswered && isWrongSelection && (
+                    <span className="text-xs font-bold text-rose-400">✕ Errato</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {examAnswers[questionId] !== undefined && (
+            <div
+              className="rounded-lg border border-slate-700 bg-slate-950/90 p-3.5 text-xs text-slate-300 shadow-sm"
+              data-testid="mcq-clinical-rationale"
+            >
+              <div className="font-bold text-blue-400">Razionale Clinico (Linee Guida ESC / CPIC):</div>
+              <p className="mt-1 leading-relaxed">
+                {questionSpec.correct_index === 1
+                  ? 'Il Pantoprazolo preserva la bioattivazione del Clopidogrel perché non inibisce in modo significativo il citocromo CYP2C19, riducendo il rischio di eventi ischemici acuti e trombosi dello stent.'
+                  : 'Risposta clinica registrata. Valutare il profilo di interazione farmacocinetica e la clearance epatica.'}
+              </p>
+            </div>
+          )}
         </div>
       )}
 
