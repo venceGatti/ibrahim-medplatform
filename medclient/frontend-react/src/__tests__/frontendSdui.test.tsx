@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeAll } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import {
   DAGNodeNotFoundError,
@@ -156,6 +156,15 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(screen.getByTestId('webgl-canvas-container-CLOPIDOGREL_01')).toBeTruthy();
   });
 
+  // We must mock the fetch logic in store to avoid overwriting our sample state on mount
+  beforeAll(() => {
+    useMedClientStore.setState({
+      evaluatePharmacologySafety: async () => {},
+      evaluateDifferentialDiagnosis: async () => {},
+      fetchClinicalSheet: async () => {},
+      submitExamEvaluation: async () => {},
+    });
+  });
   it('F41, F43, F44, F45, F46 MedClientAppShell retains all 4 views in DOM via CSS visibility and handles interactions', async () => {
     const sampleDrugSafety = {
       block_type: 'DrugSafetyBlock' as const,

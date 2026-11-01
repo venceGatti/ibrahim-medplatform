@@ -96,7 +96,7 @@ export const VirtualBlockWindow: React.FC<VirtualBlockWindowProps> = ({
   return (
     <div
       onScroll={handleContainerScroll}
-      style={{ height: `${viewportHeightPx}px`, overflowY: 'auto', position: 'relative' }}
+      style={{ height: `${viewportHeightPx}px`, overflowY: 'auto', position: 'relative', contain: 'layout style paint' }}
       className="rounded border border-slate-800 bg-slate-950/80 p-3"
       data-testid="virtual-block-window"
     >
