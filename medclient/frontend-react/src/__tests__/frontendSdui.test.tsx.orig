@@ -188,6 +188,11 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
       egfr: 64.5,
       triple_whammy_detected: true,
     };
+    act(() => {
+      useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety as any, activeMedications: ['Clopidogrel', 'Omeprazole'] });
+    });
+
+    act(() => { render(<MedClientAppShell />); });
     useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety });
 
     render(<MedClientAppShell />);
@@ -204,6 +209,9 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(examView).toBeTruthy();
 
     // Switch to Symptom Matcher tab
+    act(() => {
+      fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
+    });
     fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
     expect(symptomView.className).toContain('block');
     expect(sheetView.className).toContain('hidden');
@@ -214,12 +222,18 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(Array.isArray(symMatches)).toBe(true);
 
     // Switch to Drug Safety tab and verify Blackbox prodrug alert & CYP450 gauges
+    act(() => {
+      useMedClientStore.setState({ activeTab: 'drug_safety', liveDrugSafety: sampleDrugSafety as any, activeMedications: ['Clopidogrel', 'Omeprazole'] });
+      fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
+    });
     fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
     expect(drugView.className).toContain('block');
     expect(screen.getByTestId('blackbox-prodrug-alert')).toBeTruthy();
     expect(screen.getByTestId('cyp-gauge-CYP2C19')).toBeTruthy();
 
     // Verify Hotspot & DAG ExamSimulator modes
+    act(() => {
+      render(
     render(
       <ExamSimulatorBlockView
         block={{
@@ -239,6 +253,13 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
           fsrs_card_state: { stability: 3.5, difficulty: 4.8 },
         }}
       />
+      );
+    });
+    act(() => {
+      fireEvent.click(screen.getByTestId('hotspot-interactive-canvas'), {
+        clientX: 200,
+        clientY: 100,
+      });
     );
     fireEvent.click(screen.getByTestId('hotspot-interactive-canvas'), {
       clientX: 200,

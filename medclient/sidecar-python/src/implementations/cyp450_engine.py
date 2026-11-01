@@ -127,26 +127,6 @@ class CYP450Engine(ICYP450Engine):
         detected_interactions: List[InteractionDetail] = []
         auc_ratios: Dict[str, float] = {}
 
-        # Monotherapy: 0 interactions, no auto-inhibition
-        if len(expanded_drugs) <= 1:
-            for iso in self.ISOENZYMES:
-                cyp_states[iso.value] = CYPFunctionalState(
-                    isoenzyme=iso, baseline_capacity=1.0, computed_clearance=1.0,
-                    primary_inhibitors=[], primary_inducers=[],
-                )
-            for drug_item in expanded_drugs:
-                atc_k = str(drug_item.get("atc_code", "")).strip().upper()
-                if atc_k:
-                    auc_ratios[atc_k] = 1.0
-
-            return {
-                "cyp_profile_states": {k: v.model_dump() for k, v in cyp_states.items()},
-                "cyp_states": cyp_states,
-                "auc_ratios": auc_ratios,
-                "detected_interactions": [],
-                "interactions": [],
-            }
-
         for iso in self.ISOENZYMES:
             iso_key = iso.value
             total_inh, total_ind = 0.0, 0.0
@@ -163,6 +143,12 @@ class CYP450Engine(ICYP450Engine):
                 if ind_pot:
                     total_ind += self.INDUCER_WEIGHTS.get(ind_pot.upper(), 0.0)
                     primary_ind.append(f"{atc}:{ind_pot}")
+
+            # Check if this is monotherapy and the drug inhibits/induces itself
+            # We skip auto-inhibition and auto-induction for monotherapy
+            if len(expanded_drugs) == 1 and expanded_drugs[0].get("atc_code", "").strip().upper() == atc:
+                total_inh, total_ind = 0.0, 0.0
+                primary_inh, primary_ind = [], []
 
             ce_val = max(0.05, 1.0 - total_inh + total_ind)
             cyp_states[iso_key] = CYPFunctionalState(

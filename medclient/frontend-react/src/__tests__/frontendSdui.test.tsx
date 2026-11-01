@@ -188,9 +188,11 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
       egfr: 64.5,
       triple_whammy_detected: true,
     };
-    useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety });
+    act(() => {
+      useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety as any, activeMedications: ['Clopidogrel', 'Omeprazole'] });
+    });
 
-    render(<MedClientAppShell />);
+    act(() => { render(<MedClientAppShell />); });
 
     // Rule 8: All 4 views exist simultaneously in the DOM
     const sheetView = screen.getByTestId('dom-retained-view-clinical_sheet');
@@ -204,7 +206,9 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(examView).toBeTruthy();
 
     // Switch to Symptom Matcher tab
-    fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
+    act(() => {
+      fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
+    });
     expect(symptomView.className).toContain('block');
     expect(sheetView.className).toContain('hidden');
 
@@ -214,6 +218,10 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(Array.isArray(symMatches)).toBe(true);
 
     // Switch to Drug Safety tab and verify Blackbox prodrug alert & CYP450 gauges
+    act(() => {
+      useMedClientStore.setState({ activeTab: 'drug_safety', liveDrugSafety: sampleDrugSafety as any, activeMedications: ['Clopidogrel', 'Omeprazole'] });
+      fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
+    });
 
     act(() => {
       fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
@@ -224,7 +232,8 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     // expect(screen.getByTestId('cyp-gauge-CYP2C19')).toBeTruthy();
 
     // Verify Hotspot & DAG ExamSimulator modes
-    render(
+    act(() => {
+      render(
       <ExamSimulatorBlockView
         block={{
           block_type: 'AnatomicalHotspotBlock',
@@ -243,10 +252,13 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
           fsrs_card_state: { stability: 3.5, difficulty: 4.8 },
         }}
       />
-    );
-    fireEvent.click(screen.getByTestId('hotspot-interactive-canvas'), {
-      clientX: 200,
-      clientY: 100,
+      );
+    });
+    act(() => {
+      fireEvent.click(screen.getByTestId('hotspot-interactive-canvas'), {
+        clientX: 200,
+        clientY: 100,
+      });
     });
     expect(screen.getByTestId('hotspot-hit-feedback').textContent).toContain('HIT');
   });
