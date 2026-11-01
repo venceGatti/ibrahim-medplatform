@@ -233,6 +233,20 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
         </div>
       )}
 
+      {block.alerts?.filter(a => a.code !== 'BLACKBOX_INEFFICACY' && a.severity !== 1).length > 0 && (
+        <div className="space-y-2" data-testid="general-pharmacotherapy-alerts">
+          {block.alerts.filter(a => a.code !== 'BLACKBOX_INEFFICACY' && a.severity !== 1).map((alert, idx) => (
+            <div
+              key={`alert-${idx}`}
+              className="rounded-lg border border-amber-500/60 bg-amber-950/60 p-3 text-xs font-semibold text-amber-200"
+              data-testid={`pharmacotherapy-alert-${idx}`}
+            >
+              <span className="font-bold text-amber-400">Allerta {alert.code} (Livello {alert.severity}):</span> {alert.message || 'Nessun dettaglio disponibile.'}
+            </div>
+          ))}
+        </div>
+      )}
+
       {block.fdc_decompositions && block.fdc_decompositions.length > 0 && (
         <div className="space-y-1.5" data-testid="fdc-decomposition-badges">
           <span className="text-xs font-bold uppercase tracking-wider text-purple-300">
