@@ -1,20 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Orchestratore Multi-Agente CrewAI per la Generazione Iterativa del Documento SRS.
+generatore_architettura.py
+
+Orchestratore Multi-Agente Asincrono per la Generazione e Cura dell'Architettura SRS.
 Piattaforma Medica Ibrida: MedFactory (Build-Time) & MedClient (Run-Time).
-Modello LLM: Google Gemini via CrewAI / langchain-google-genai.
+Supporta Google AI Studio Free Tier (gemini-2.5-flash / gemini-1.5-flash) con Semaphore e
+motore di sintesi tecnica deterministica offline a costo zero assoluto (0,00 €).
 """
 
+from __future__ import annotations
+
+import argparse
+import asyncio
 import os
 import sys
 import time
 from datetime import datetime
-from typing import List, Dict
+from pathlib import Path
+from typing import List, Set
 
-from srs_modules_catalog import MASTER_PLAN_MODULES
+from srs_catalog import ALL_SRS_MODULES, SRSModuleDefinition
+from srs_generator import (
+    AsyncGeminiOrchestrator,
+    generate_traceability_matrix_markdown,
+)
 
-# Configurazione encoding UTF-8 per console Windows (prevenzione UnicodeEncodeError)
+# Configurazione encoding UTF-8 per console Windows
 if sys.platform.startswith("win"):
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
@@ -22,250 +34,173 @@ if sys.platform.startswith("win"):
         sys.stderr.reconfigure(encoding="utf-8")
 
 
-def _initialize_llm_orchestrator():
-    """Verifica la presenza di GEMINI_API_KEY e inizializza il client LLM di orchestrazione."""
-    api_key_env_var: str = "GEMINI_API_KEY"
-    gemini_api_key: str = os.environ.get(api_key_env_var, "").strip()
+def inspect_existing_modules(target_file_path: Path) -> Set[str]:
+    """Identifica i titoli esatti dei moduli già redatti nel documento per evitare rigenerazioni ridondanti."""
+    if not target_file_path.exists():
+        return set()
 
-    if not gemini_api_key:
-        sys.stderr.write(
-            f"[ERRORE CRITICO] La variabile d'ambiente '{api_key_env_var}' non è configurata o è vuota.\n"
-            "Imposta la variabile da terminale PowerShell prima di eseguire lo script:\n"
-            '  $env:GEMINI_API_KEY = "la_tua_chiave_google_ai_studio"\n'
-            "oppure in Bash:\n"
-            '  export GEMINI_API_KEY="la_tua_chiave_google_ai_studio"\n'
-        )
-        sys.exit(1)
+    with open(target_file_path, "r", encoding="utf-8") as file_handle:
+        full_text = file_handle.read()
 
-    try:
-        from google.api_core.exceptions import ResourceExhausted
-        from crewai import Agent, Task, Crew, Process, LLM
-    except ImportError:
-        try:
-            from google.api_core.exceptions import ResourceExhausted
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            from crewai import Agent, Task, Crew, Process
-            LLM = None
-        except ImportError as import_err:
-            sys.stderr.write(
-                f"[ERRORE DIPENDENZE] Modulo mancante: {import_err}.\n"
-                "Installa le dipendenze richieste eseguendo:\n"
-                "  pip install -r requirements.txt\n"
-            )
-            sys.exit(1)
-
-    default_model = os.environ.get("GEMINI_MODEL", "gemini-flash-latest").strip()
-    crewai_model_name = default_model if default_model.startswith("gemini/") else f"gemini/{default_model}"
-    langchain_model_name = default_model.replace("gemini/", "")
-
-    if LLM is not None:
-        llm_orchestrator = LLM(
-            model=crewai_model_name,
-            temperature=0.1,
-            api_key=gemini_api_key,
-        )
-    else:
-        from langchain_google_genai import ChatGoogleGenerativeAI
-        llm_orchestrator = ChatGoogleGenerativeAI(
-            model=langchain_model_name,
-            temperature=0.1,
-            max_retries=5,
-            google_api_key=gemini_api_key,
-        )
-    return llm_orchestrator, Agent, Task, Crew, Process, ResourceExhausted
+    found_titles: Set[str] = set()
+    for mod in ALL_SRS_MODULES:
+        if mod.titolo_capitolo in full_text:
+            found_titles.add(mod.module_code)
+    return found_titles
 
 
-master_plan: List[Dict[str, str]] = MASTER_PLAN_MODULES
+async def process_module(
+    module_item: SRSModuleDefinition,
+    orchestrator: AsyncGeminiOrchestrator,
+    target_file_path: Path,
+    index: int,
+    total: int,
+) -> None:
+    """Elabora un singolo macro-modulo e ne esegue l'append atomico sul file di output."""
+    print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...")
+    start_time = time.time()
+
+    generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
+
+    # Scrittura in append protetto con flush
+    with open(target_file_path, "a", encoding="utf-8") as file_append_handle:
+        file_append_handle.write(f"\n## {module_item.titolo_capitolo}\n\n")
+        file_append_handle.write(generated_content)
+        file_append_handle.write("\n\n---\n")
+        file_append_handle.flush()
+
+    elapsed = time.time() - start_time
+    print(f"  [OK] Modulo {module_item.module_code} completato e archiviato in {elapsed:.2f}s.")
 
 
-def is_rate_limit_exception(exc: Exception, resource_exhausted_cls: type) -> bool:
-    """Rileva se un'eccezione è dovuta a saturazione di quota, rate-limit (HTTP 429) o sovraccarico (HTTP 503)."""
-    if isinstance(exc, resource_exhausted_cls):
-        return True
-    if hasattr(exc, "code") and getattr(exc, "code") in (429, 503):
-        return True
-    messaggio_diagnostico = str(exc).lower()
-    marcatori_rate_limit = (
-        "429", "resource_exhausted", "quota", "rate limit",
-        "too many requests", "503", "overloaded", "unavailable"
-    )
-    return any(marcatore in messaggio_diagnostico for marcatore in marcatori_rate_limit)
-
-
-def esegui_con_backoff(crew_instance, resource_exhausted_cls: type, tentativo: int = 1) -> str:
-    """
-    Esegue l'istanza CrewAI catturando le eccezioni di Rate Limit (HTTP 429 / ResourceExhausted) o 503.
-    In caso di saturazione, applica un backoff forzato di 60 secondi prima di rieseguire ricorsivamente.
-    """
-    try:
-        crew_output = crew_instance.kickoff()
-        if hasattr(crew_output, "raw"):
-            return str(crew_output.raw)
-        return str(crew_output)
-    except Exception as exc:
-        if is_rate_limit_exception(exc, resource_exhausted_cls):
-            tempo_attesa = 60
-            timestamp_attuale = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            sys.stderr.write(
-                f"\n[{timestamp_attuale}] [BACKOFF / RATE LIMIT] Quota o saturazione API Gemini rilevata ({exc}).\n"
-                f"Tentativo #{tentativo}: pausa forzata di {tempo_attesa} secondi (Self-Healing in corso).\n"
-            )
-            time.sleep(tempo_attesa)
-            return esegui_con_backoff(crew_instance, resource_exhausted_cls, tentativo=tentativo + 1)
-        timestamp_attuale = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sys.stderr.write(
-            f"\n[{timestamp_attuale}] [ERRORE IMPREVISTO] Eccezione durante l'esecuzione del modulo: {exc}\n"
-        )
-        raise exc
-
-
-def build_agents(llm_orchestrator, agent_cls):
-    """Costruisce i quattro agenti specializzati CrewAI."""
-    systems_architect = agent_cls(
-        role="Lead Systems Architect & Backend Engineer",
-        goal=(
-            "Progettare l'architettura tecnica desktop, l'infrastruttura IPC a bassa latenza (<50ms), "
-            "la gestione SQLite WAL concorrente, il protocollo Zero-Copy memory-mapped per i media "
-            "e i limiti di memoria fisica (<300MB RAM) per PC client Intel Core i7 senza GPU."
-        ),
-        backstory=(
-            "Sei un Senior Principal Architect specializzato in ingegneria di sistemi critici, desktop computing "
-            "con Tauri/Rust, sidecar FastAPI, basi di dati relazionali ACID e ottimizzazioni memory-mapped I/O. "
-            "Rifiuti categoricamente qualsiasi spreco di memoria, lock bloccanti e serializzazioni inefficienti."
-        ),
-        verbose=True,
-        allow_delegation=False,
-        llm=llm_orchestrator,
-    )
-
-    medical_ai_specialist = agent_cls(
-        role="Applied Medical AI & NLP Specialist",
-        goal=(
-            "Garantire la purezza deterministica delle conoscenze cliniche, formalizzare l'uso di ontologie ufficiali "
-            "(HPO per fenotipi, ATC per farmacologia), definire la pipeline NLP client-side senza LLM generativi, "
-            "progettare la correzione NLI Cross-Encoder per le risposte aperte e l'algoritmo mnemonico FSRS."
-        ),
-        backstory=(
-            "Sei un Ingegnere Informatico Medico ed esperto di NLP computazionale applicato all'educazione clinica. "
-            "Conosci a fondo la medicina interna, la farmacologia e le metodologie d'esame universitarie. "
-            "Rifiuti categoricamente il RAG generativo client-side e i pesi inventati dagli LLM, imponendo ontologie certificate."
-        ),
-        verbose=True,
-        allow_delegation=False,
-        llm=llm_orchestrator,
-    )
-
-    qa_critic = agent_cls(
-        role="Aggressive QA & Edge-Case Auditor",
-        goal=(
-            "Attaccare e demolire preventivamente ogni soluzione architetturale, identificando scenari di memory bloat, "
-            "race-condition, deadlock SQLite, floating-point underflow, conflitti IPC, processi zombie e "
-            "violazioni dei requisiti di confidenzialità e conformità normativa."
-        ),
-        backstory=(
-            "Sei un auditor di qualità e sicurezza paranoico e spietato. Il tuo obiettivo primario è scovare il "
-            "punto esatto di rottura del software prima che arrivi all'utente finale. Blocchi sul nascere qualsiasi "
-            "proposta che rischi di superare i 300MB di RAM allocata sul client o corrompere i dati dello studente."
-        ),
-        verbose=True,
-        allow_delegation=False,
-        llm=llm_orchestrator,
-    )
-
-    technical_writer = agent_cls(
-        role="Senior Medical Technical Documentation Engineer",
-        goal=(
-            "Sintetizzare il dibattito e redigere formalmente i requisiti ingegneristici in un documento Markdown SRS "
-            "rigoroso, privo di convenevoli, ricco di specifiche DDL, schemi architetturali testuali, contratti Pydantic, "
-            "formule matematiche e matrici decisionali."
-        ),
-        backstory=(
-            "Sei uno scrittore tecnico d'élite con decenni di esperienza nella stesura di specifiche Software Requirements "
-            "Specification (SRS standard IEEE/ISO). Produci documentazione tecnica asciutta, densa, iper-strutturata "
-            "e direttamente pronta per guidare l'implementazione del software senza margini di interpretazione soggettiva."
-        ),
-        verbose=True,
-        allow_delegation=False,
-        llm=llm_orchestrator,
-    )
-    return systems_architect, medical_ai_specialist, qa_critic, technical_writer
-
-
-def main() -> None:
-    llm_orchestrator, Agent, Task, Crew, Process, ResourceExhausted = _initialize_llm_orchestrator()
-    systems_architect, medical_ai_specialist, qa_critic, technical_writer = build_agents(llm_orchestrator, Agent)
-
-    nome_file_output: str = "SRS_MedClient_Architettura_Completa.md"
-    totale_capitoli: int = len(master_plan)
-
+async def run_pipeline(
+    output_path: Path,
+    is_offline: bool,
+    model_name: str,
+    workers_count: int,
+    audit_only: bool,
+) -> int:
+    """Esegue la pipeline di generazione ed audit dell'architettura di sistema."""
     print("=" * 80)
-    print("PIATTAFORMA MEDICA IBRIDA - GENERATORE SRS MULTI-AGENTE (CREWAI & GEMINI)")
+    print("MEDPLATFORM - GENERATORE MULTI-AGENTE & AUDIT ARCHITETTURA SRS")
     print(f"Data di avvio: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-    print(f"Totale moduli da elaborare: {totale_capitoli}")
-    print(f"File di output: {nome_file_output}")
+    print(f"File di output: {output_path.resolve()}")
+    print(f"Modalità operativa: {'OFFLINE DETERMINISTICA (0,00 €)' if is_offline else f'ONLINE GEMINI ({model_name})'}")
     print("=" * 80)
 
-    if not os.path.exists(nome_file_output):
-        with open(nome_file_output, "w", encoding="utf-8") as f_init:
-            f_init.write(
+    if not output_path.exists():
+        with open(output_path, "w", encoding="utf-8") as file_init:
+            file_init.write(
                 "# Software Requirements Specification (SRS) - Piattaforma Medica Ibrida\n"
                 "## Architettura Completa di Sistema: MedFactory (Build-Time) & MedClient (Run-Time)\n"
                 f"**Data di Generazione:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}  \n"
-                "**Standard:** IEEE/ISO Software Requirements Specification  \n"
-                "**Orchestrazione:** CrewAI Multi-Agent Pipeline con Google Gemini 1.5 Pro  \n\n"
+                "**Standard:** IEEE/ISO Software Requirements Specification\n"
+                "**Orchestrazione:** Async Multi-Agent Pipeline con Dual-Pass & Sentinel QA Audit  \n\n"
                 "---\n\n"
             )
 
-    for indice, modulo in enumerate(master_plan, start=1):
-        titolo = modulo["titolo_capitolo"]
-        direttive = modulo["direttive"]
+    # Bonifica preventiva: rimuove eventuale audit matrix precedente dal fondo prima di generare
+    with open(output_path, "r", encoding="utf-8") as file_read:
+        current_content = file_read.read()
 
-        print(f"\n[{indice}/{totale_capitoli}] Inizio elaborazione: {titolo}")
-        inizio_modulo = time.time()
+    audit_marker = "\n# AUDIT GLOBALE RICORSIVO E MATRICE DI TRACCIABILITÀ FORMALE"
+    if audit_marker in current_content:
+        current_content = current_content.split(audit_marker)[0].rstrip()
+        with open(output_path, "w", encoding="utf-8", newline="\n") as file_trim:
+            file_trim.write(current_content)
 
-        task_modulo = Task(
-            description=(
-                f"Sei incaricato di redigere formalmente la specifica tecnica per: '{titolo}'.\n"
-                f"Direttive dettagliate da implementare:\n{direttive}\n\n"
-                "Vincoli di Stile e Formato:\n"
-                "- Linguaggio: Italiano tecnico formale con nomenclatura medica standard e codici HPO/ATC/ICD-10.\n"
-                "- Nessuna introduzione generica, convenevoli, o formule di cortesia.\n"
-                "- Solo specifiche ingegneristiche asciutte, strutture dati, equazioni matematiche, tabelle e contratti."
-            ),
-            expected_output=(
-                "Trattazione esaustiva in formato Markdown GitHub-Flavored, con sezioni di livello 2, 3 e 4, "
-                "blocchi di codice per schemi DDL/JSON/Pydantic, formule matematiche formali e analisi dei rischi."
-            ),
-            agent=systems_architect,
-        )
+    if not audit_only:
+        existing_module_codes = inspect_existing_modules(output_path)
+        print(f"[SRS-PIPELINE] Moduli già archiviati nel documento: {len(existing_module_codes)}")
 
-        crew_modulo = Crew(
-            agents=[systems_architect, medical_ai_specialist, qa_critic, technical_writer],
-            tasks=[task_modulo],
-            process=Process.sequential,
-            verbose=False,
-        )
+        modules_to_generate: List[SRSModuleDefinition] = [
+            mod for mod in ALL_SRS_MODULES if mod.module_code not in existing_module_codes
+        ]
 
-        contenuto_generato: str = esegui_con_backoff(crew_modulo, ResourceExhausted)
+        if not modules_to_generate:
+            print("[SRS-PIPELINE] Tutti i 26 macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
+        else:
+            print(f"[SRS-PIPELINE] Moduli da generare/integrare: {len(modules_to_generate)}/{len(ALL_SRS_MODULES)}")
+            orchestrator = AsyncGeminiOrchestrator(
+                model_name=model_name,
+                max_concurrent_workers=workers_count,
+            )
+            if is_offline:
+                orchestrator.is_offline_mode = True
 
-        with open(nome_file_output, "a", encoding="utf-8") as f_out:
-            f_out.write(f"\n## {titolo}\n\n")
-            f_out.write(contenuto_generato)
-            f_out.write("\n\n---\n")
-            f_out.flush()
+            total_to_process = len(modules_to_generate)
+            # Esecuzione asincrona con semaforo
+            tasks = [
+                process_module(mod, orchestrator, output_path, idx, total_to_process)
+                for idx, mod in enumerate(modules_to_generate, start=1)
+            ]
+            await asyncio.gather(*tasks)
 
-        durata = time.time() - inizio_modulo
-        print(f"[OK] {titolo} completato e salvato in {durata:.1f} secondi.")
+    # Fase Finale: Audit Globale Ricorsivo e Matrice di Tracciabilità
+    print("\n[SRS-PIPELINE] Avvio dell'Audit Globale Ricorsivo sulle 34 Assunzioni Operative (ROA)...")
+    audit_appendix_markdown = generate_traceability_matrix_markdown(output_path)
 
-        if indice < totale_capitoli:
-            pausa_fisiologica = 10
-            print(f"Pausa fisiologica di {pausa_fisiologica}s per la quota API.")
-            time.sleep(pausa_fisiologica)
+    with open(output_path, "a", encoding="utf-8") as file_audit_handle:
+        file_audit_handle.write(audit_appendix_markdown)
+        file_audit_handle.flush()
 
-    print("\n" + "=" * 80)
-    print("PROCESSO DI GENERAZIONE SRS COMPLETATO CON SUCCESSO!")
-    print(f"Documento finale generato in: {os.path.abspath(nome_file_output)}")
+    with open(output_path, "r", encoding="utf-8") as file_check:
+        final_line_count = sum(1 for _ in file_check)
+
     print("=" * 80)
+    print("PROCESSO DI GENERAZIONE & CERTIFICAZIONE SRS COMPLETATO CON SUCCESSO!")
+    print(f"Conteggio finale righe SRS: {final_line_count}")
+    print(f"Documento consolidato in: {output_path.resolve()}")
+    print("=" * 80)
+    return 0
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Generatore e Curatore SRS Multi-Agente MedPlatform")
+    parser.add_argument(
+        "--output",
+        type=str,
+        default="SRS_MedClient_Architettura_Completa.md",
+        help="Percorso del file SRS Markdown di output",
+    )
+    parser.add_argument(
+        "--offline",
+        action="store_true",
+        default=False,
+        help="Forza l'esecuzione in sintesi deterministica offline a costo zero",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
+        help="Modello Gemini per le chiamate API (default: gemini-2.5-flash)",
+    )
+    parser.add_argument(
+        "--workers",
+        type=int,
+        default=2,
+        help="Numero massimo di worker concorrenti (default: 2 per rispetto rate limits)",
+    )
+    parser.add_argument(
+        "--audit-only",
+        action="store_true",
+        default=False,
+        help="Esegue unicamente l'audit ricorsivo e appende la matrice di conformità",
+    )
+
+    arguments = parser.parse_args()
+    target_path = Path(arguments.output).resolve()
+
+    exit_code = asyncio.run(
+        run_pipeline(
+            output_path=target_path,
+            is_offline=arguments.offline,
+            model_name=arguments.model,
+            workers_count=arguments.workers,
+            audit_only=arguments.audit_only,
+        )
+    )
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":
