@@ -57,7 +57,7 @@ async def process_module(
     total: int,
 ) -> None:
     """Elabora un singolo macro-modulo e ne esegue l'append atomico sul file di output."""
-    print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...")
+    print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...", flush=True)
     start_time = time.time()
 
     generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
@@ -70,7 +70,7 @@ async def process_module(
         file_append_handle.flush()
 
     elapsed = time.time() - start_time
-    print(f"  [OK] Modulo {module_item.module_code} completato e archiviato in {elapsed:.2f}s.")
+    print(f"  [OK] Modulo {module_item.module_code} completato e archiviato in {elapsed:.2f}s.", flush=True)
 
 
 async def run_pipeline(
@@ -172,8 +172,8 @@ def main() -> None:
     parser.add_argument(
         "--model",
         type=str,
-        default=os.environ.get("GEMINI_MODEL", "gemini-2.5-flash"),
-        help="Modello Gemini per le chiamate API (default: gemini-2.5-flash)",
+        default=os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite"),
+        help="Modello Gemini per le chiamate API (default: gemini-3.5-flash-lite)",
     )
     parser.add_argument(
         "--workers",

@@ -123,3 +123,4 @@ def generate_traceability_matrix_markdown(file_path: Path) -> str:
     ])
 
     return "\n".join(lines)
+

@@ -99,6 +99,26 @@ class DeterministicSynthesisEngine:
                 "    watchdog_thread.start()",
                 "```",
             ])
+        elif code == "2.1":
+            builder.extend([
+                "#### 2.1 Connettori alle Banche Dati Mediche Ufficiali e Configurazione Sorgenti Utente",
+                "```sql",
+                "CREATE TABLE IF NOT EXISTS user_knowledge_sources (",
+                "    source_id TEXT PRIMARY KEY NOT NULL,",
+                "    source_name TEXT NOT NULL,",
+                "    source_type TEXT NOT NULL CHECK(source_type IN ('pubmed', 'openfda', 'chembl', 'hpo', 'custom_git', 'local_folder')),",
+                "    endpoint_url TEXT NOT NULL,",
+                "    api_token TEXT NOT NULL DEFAULT '',",
+                "    is_active INTEGER NOT NULL DEFAULT 1 CHECK(is_active IN (0, 1)),",
+                "    last_synced_utc TEXT NOT NULL DEFAULT ''",
+                ") STRICT;",
+                "```",
+                "#### 2.2 Specifiche Connettori Ufficiali API",
+                "- **PubMed / Entrez E-Utilities**: Base URL `https://eutils.ncbi.nlm.nih.gov/entrez/eutils/`, parser XML/JSON per linee guida ESC/AHA/KDIGO.",
+                "- **OpenFDA Drug API**: Base URL `https://api.fda.gov/drug/label.json`, recupero avvertenze Blackbox e reazioni avverse.",
+                "- **ChEMBL REST API**: Base URL `https://www.ebi.ac.uk/chembl/api/data/`, estrazione target terapeutici e meccanismi d'azione.",
+                "- **HPO & Orphanet**: Parsing deterministico dei dump aperti `hp.obo` e `phenotype.hpoa`.",
+            ])
         elif code == "2.3":
             builder.extend([
                 "#### 2.1 Algoritmo SymSpell Damerau-Levenshtein <= 2 con Indice Lemmi Canonici",
@@ -192,6 +212,28 @@ class DeterministicSynthesisEngine:
                 "$$AS = \\sum \\text{score}(\\text{allele}_k), \\quad \\text{con } \\text{allele} \\in \\{*1, *2, *3, *4, *17, *41, \\dots\\}$$",
                 "$$AS=0 \\implies PM, \\quad 0<AS\\le 1.0 \\implies IM, \\quad 1.25\\le AS\\le 2.25 \\implies NM, \\quad AS>2.25 \\implies UM$$",
             ])
+        elif code == "4.1":
+            builder.extend([
+                "#### 2.1 Ingestione Banche Dati MedQA / USMLE e Parser Custom Anki/JSONL",
+                "```sql",
+                "CREATE TABLE IF NOT EXISTS exam_items (",
+                "    item_id TEXT PRIMARY KEY NOT NULL,",
+                "    discipline_code TEXT NOT NULL,",
+                "    question_text TEXT NOT NULL COLLATE NOCASE,",
+                "    option_a TEXT NOT NULL,",
+                "    option_b TEXT NOT NULL,",
+                "    option_c TEXT NOT NULL,",
+                "    option_d TEXT NOT NULL,",
+                "    correct_option TEXT NOT NULL CHECK(correct_option IN ('A', 'B', 'C', 'D')),",
+                "    rationale_full TEXT NOT NULL,",
+                "    source_dataset TEXT NOT NULL,",
+                "    difficulty_level REAL NOT NULL DEFAULT 1.0",
+                ") STRICT;",
+                "```",
+                "#### 2.2 Parser Anki (.apkg/.tsv) e Formato JSONL Accademico",
+                "Il modulo supporta l'importazione automatica di mazzi Anki e file JSONL personalizzati dello studente,",
+                "mappando i campi `Front`/`Back` nelle 4 scelte con distractor generation assistita o razionale clinico esplicativo.",
+            ])
         elif code == "4.2":
             builder.extend([
                 "#### 2.1 Validazione Geometrica Hotspot, Formula di Shoelace e Ray-Casting Even-Odd",
@@ -228,6 +270,12 @@ class DeterministicSynthesisEngine:
                 "    }",
                 "}",
                 "```",
+                "#### 2.2 Pannello Impostazioni Sorgenti Utente (SettingsSourcesView)",
+                "Interfaccia reattiva in React SDUI per la gestione dinamica delle sorgenti mediche:",
+                "- Gestione chiavi API esterne (es. NCBI E-utilities, OpenFDA)",
+                "- Sincronizzazione con repository Git / cartelle locali di appunti e mazzi Anki",
+                "- Visualizzazione dello stato degli indici e conteggio record reali in `module_kb.sqlite`",
             ])
         else:
             builder.append("#### 2.1 Specifiche dei Contratti di Dominio e Modelli Pydantic v2\nI contratti di interfaccia applicano validazione stretta sui tipi e campi privi di valori sentinella arbitrari.")
+

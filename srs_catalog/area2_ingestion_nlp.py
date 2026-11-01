@@ -18,11 +18,18 @@ AREA2_MODULES: List[SRSModuleDefinition] = [
         area_name="Area 2: Knowledge Ingestion & NLP Edge Pipeline",
         applicable_roas=["ROA-06", "ROA-18", "ROA-19"],
         direttive="""
-Redigere la specifica tecnica per il Modulo 2.1: Ingestione Documentale DLA e Decomposizione Gerarchica dei Testi Medici.
+Redigere la specifica tecnica per il Modulo 2.1: Ingestione Documentale DLA, Connettori API Mediche Certificate e Sorgenti Personalizzabili.
 Direttive vincolanti da sviluppare in dettaglio:
 1. Systems Architect:
-   - Pipeline di estrazione in MedFactory basata su Document Layout Analysis (DLA) avanzata (IBM Docling / Marker) per trattati di medicina interna, farmacologia e patologia.
-   - Tracciamento della provenienza bibliografica immutabile: associazione di ogni blocco a ISBN, titolo accademico, edizione, capitolo, pagina e DOI/PMID.
+   - Pipeline ETL asincrona in MedFactory per l'estrazione da banche dati mediche certificate aperte:
+     * PubMed / PMC E-Utilities API (NCBI): estrazione linee guida cliniche e abstract certificati via REST/XML.
+     * OpenFDA API: acquisizione monografie ufficiali FDA, blackbox warnings, dosaggi ed eventi avversi (JSON).
+     * ChEMBL REST API & PubChem: recupero strutture chimiche, target bioattivi e meccanismi d'azione.
+     * HPO (hp.obo, phenotype.hpoa) e Orphanet / ICD-10: relazioni patologia-fenotipo con frequenze epidemiologiche reali.
+   - Connettori per Sorgenti Personalizzate dall'Utente (Custom User Sources):
+     * Configurazione nelle impostazioni utente (`user_knowledge_sources`): supporto a link HTTP/REST esterni, chiavi API personali (es. NCBI API key per throughput a 10 req/s), e repository GitHub pubblici di flashcard/schede mediche (Anki / JSONL).
+     * Ingestion locale di manuali universitari personali (PDF, DOCX) tramite IBM Docling / Marker con layout analysis a colonne e tabelle cellulari.
+   - Tracciamento della provenienza bibliografica immutabile: associazione di ogni blocco a ISBN, DOI/PMID, URL sorgente o ID record FDA.
    - Architettura di Chunking Gerarchico Parent-Child: Blocchi Padre da 800-1200 token archiviati in SQLite per il rendering integrale, e Micro-blocchi Figlio da 150-250 token per l'indice vettoriale con iniezione di Breadcrumb Context.
 2. Medical AI Specialist:
    - Preservazione topologica delle tabelle cliniche: isolamento cellulare di dosaggi, intervalli terapeutici, controindicazioni senza appiattimento in testo grezzo.
@@ -31,7 +38,7 @@ Direttive vincolanti da sviluppare in dettaglio:
    - Analisi delle anomalie OCR: confusione tra microgrammi (mcg/ug) e milligrammi (mg), celle fuse (rowspan/colspan), e frammenti testuali decontestualizzati.
    - Validazione a doppio checksum BLAKE3 + SHA-256 su tutti i file estratti prima dell'impacchettamento (ROA-06).
 4. Technical Writer:
-   - Fornire gli schemi JSON/Pydantic per i blocchi gerarchici e il diagramma di flusso della pipeline di parsing DLA.
+   - Fornire gli schemi JSON/Pydantic per i connettori alle API pubbliche, la tabella di configurazione delle custom user sources e il diagramma di flusso della pipeline ETL.
 """,
     ),
     SRSModuleDefinition(
@@ -123,3 +130,4 @@ Direttive vincolanti da sviluppare in dettaglio:
 """,
     ),
 ]
+

@@ -24,11 +24,12 @@ class AsyncGeminiOrchestrator:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model_name: str = "gemini-2.5-flash",
+        model_name: str = "gemini-3.5-flash-lite",
         max_concurrent_workers: int = 2,
     ) -> None:
         self.api_key: str = (api_key or os.environ.get("GEMINI_API_KEY", "")).strip()
         self.model_name: str = model_name
+        self.fallback_model: str = "gemini-3.8-flash"
         self.semaphore = asyncio.Semaphore(max_concurrent_workers)
         self.is_offline_mode: bool = not bool(self.api_key)
 
@@ -69,14 +70,18 @@ class AsyncGeminiOrchestrator:
                 "Nessun mock, nessun convenevole, solo ingegneria pura e analisi dei rischi."
             )
 
-            # Esecuzione nel threadpool per chiamate sincrone dell'SDK
+            # Esecuzione nel threadpool con timeout per prevenire blocchi indefiniti
             loop = asyncio.get_running_loop()
-            response = await loop.run_in_executor(
-                None,
-                lambda: client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt_content,
-                )
+            current_model = self.model_name if attempt == 1 else self.fallback_model
+            response = await asyncio.wait_for(
+                loop.run_in_executor(
+                    None,
+                    lambda: client.models.generate_content(
+                        model=current_model,
+                        contents=prompt_content,
+                    )
+                ),
+                timeout=60.0,
             )
 
             if hasattr(response, "text") and response.text:
@@ -86,12 +91,13 @@ class AsyncGeminiOrchestrator:
         except Exception as exc:
             err_msg = str(exc).lower()
             if any(marker in err_msg for marker in ["429", "quota", "resource_exhausted", "503", "overloaded"]):
-                wait_time = (2 ** attempt) * 15 + random.uniform(1.0, 5.0)
+                wait_time = 2.0 if attempt == 1 else (attempt * 10.0 + random.uniform(1.0, 3.0))
                 sys.stderr.write(
-                    f"[GEMINI-CLIENT] Rate limit rilevato ({exc}). Backoff di {wait_time:.1f}s (Tentativo {attempt}/3)...\n"
+                    f"[GEMINI-CLIENT] Spikes/Rate limit su {current_model} ({exc}). Switch su {self.fallback_model} (Tentativo {attempt}/3, wait {wait_time:.1f}s)...\n"
                 )
                 await asyncio.sleep(wait_time)
                 return await self._call_gemini_with_backoff(module_def, attempt + 1)
 
             sys.stderr.write(f"[GEMINI-CLIENT] Errore imprevisto ({exc}). Fallback su sintesi deterministica.\n")
             return DeterministicSynthesisEngine.generate_module_specification(module_def)
+

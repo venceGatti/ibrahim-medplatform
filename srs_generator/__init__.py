@@ -23,3 +23,4 @@ __all__ = [
     "calculate_sha256_digest",
     "generate_traceability_matrix_markdown",
 ]
+

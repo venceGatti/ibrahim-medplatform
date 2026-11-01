@@ -18,11 +18,16 @@ AREA5_MODULES: List[SRSModuleDefinition] = [
         area_name="Area 5: Didattica, Simulazione, SDUI & Resilienza Frontend",
         applicable_roas=["ROA-20", "ROA-33"],
         direttive="""
-Redigere la specifica tecnica per il Modulo 4.1: Simulatore Esami MCQ a Scelta Multipla e Feedback Didattico.
+Redigere la specifica tecnica per il Modulo 4.1: Simulatore Esami MCQ con Banche Dati Mediche Reali (MedQA/USMLE) e Importazione Personalizzata.
 Direttive vincolanti da sviluppare in dettaglio:
 1. Systems Architect:
    - Architettura del motore d'esame in FastAPI sidecar con risposte in tempo reale: `/api/v3/exam/evaluate` (ROA-33).
-   - Memorizzazione relazionale in `module_kb.sqlite` (`exam_items STRICT`, `exam_distractors STRICT`, ROA-20).
+   - Ingestione massiva da banche dati aperte certificate:
+     * Dataset accademico pubblico MedQA (USMLE 4-options, ~12.000 quesiti clinici reali con 4 scelte, casistiche cliniche e razionali dettagliati).
+     * Dataset aperti MedMCQA e PubMedQA per le discipline specialistiche (Cardiologia, Pneumologia, Farmacologia, Infettivologia).
+   - Modulo di Importazione Personalizzata dello Studente (User Custom Quiz Importer):
+     * Parser per flashcard/quiz Anki (.apkg/.tsv) e file JSONL per consentire allo studente di importare le prove d'esame della propria università.
+     * Memorizzazione relazionale in `user_state.sqlite` e `module_kb.sqlite` (`exam_items STRICT`, `exam_distractors STRICT`, ROA-20).
 2. Medical AI Specialist:
    - Struttura del quesito MCQ a 4 scelte (1 corretta, 3 distrattori plausibili conformi agli standard National Board of Medical Examiners NBME / USMLE).
    - Esplicazione analitica obbligatoria: per ogni opzione, razionale didattico dettagliato che spiega non solo perché l'opzione corretta e esatta, ma perché ciascun distrattore e clinicamente errato o fuorviante.
@@ -31,7 +36,7 @@ Direttive vincolanti da sviluppare in dettaglio:
    - Eliminazione categorica di mock o quiz cablati nel frontend (ROA-33): ogni quesito deve essere validato ed emesso dal backend relazionale.
    - Tracciamento della conformità pedagogica: assenza di trabocchetti grammaticali o indizi involontari nella formulazione del quesito.
 4. Technical Writer:
-   - Includere lo schema JSON completo del blocco `ExamSimulatorBlock` e il modello DDL SQL normalizzato delle tabelle d'esame.
+   - Includere lo schema JSON completo del blocco `ExamSimulatorBlock`, il modello DDL SQL normalizzato delle tabelle d'esame e le specifiche del parser Anki/JSONL.
 """,
     ),
     SRSModuleDefinition(
@@ -143,6 +148,7 @@ Direttive vincolanti da sviluppare in dettaglio:
    - Parita assoluta dei contratti tra FastAPI e React (ROA-02, ROA-33): registrazione nel registry dei 4 blocchi tipizzati (`ClinicalSheetBlock`, `SymptomMatcherBlock`, `DrugSafetyBlock`, `ExamSimulatorBlock`) con alias backward-compatible.
    - Eliminazione categorica di mock cablati in `MedClientAppShell.tsx`: consumo esclusivo di payload emessi dal sidecar (ROA-33).
    - Zero LLM generativo nel frontend: rendering di payload deterministici strutturati (ROA-11).
+   - Sezione Pannello Impostazioni Sorgenti e Connettori (`SettingsSourcesView`): interfaccia utente per la gestione delle chiavi API personali (NCBI, FDA), link a repository GitHub/Anki esterni, e monitoraggio dello stato di sincronizzazione del database locale.
 2. Medical AI Specialist:
    - Ritenzione integrale del DOM a 60 FPS e latenza 0 ms al cambio scheda (ROA-30): le schermate rimangono montate stabilmente nel DOM e commutate via classi CSS (`block opacity-100` vs `hidden opacity-0 pointer-events-none`).
    - Applicazione selettiva del Virtual Windowing (TanStack Virtual) esclusivamente alle liste estese di paragrafi all'interno delle monografie (`ClinicalSheetBlock` con oltre 20 paragrafi), senza impattare lo stato globale.
@@ -155,3 +161,4 @@ Direttive vincolanti da sviluppare in dettaglio:
 """,
     ),
 ]
+

@@ -30,3 +30,4 @@ class SRSModuleDefinition:
             "area_name": self.area_name,
             "applicable_roas": ", ".join(self.applicable_roas),
         }
+
