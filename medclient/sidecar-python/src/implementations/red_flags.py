@@ -136,7 +136,10 @@ class RedFlagsInterceptor(IRedFlagsInterceptor):
             elif 95 <= spo2 <= 96:
                 spo2_points = 2 if supp_o2 else 0
             else:  # >= 97
-                spo2_points = 3 if supp_o2 else 0
+                if supp_o2:
+                    spo2_points = 3
+                else:
+                    spo2_points = 0
 
         score += spo2_points
         if spo2_points == 3:

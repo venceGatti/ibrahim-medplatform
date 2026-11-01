@@ -80,7 +80,7 @@ export const DrugSafetyBlockView: React.FC<DrugSafetyBlockViewProps> = ({ block 
   const egfrScaledPercentage = Math.min(100, Math.max(0, Math.round((displayedEgfr / 120) * 100)));
   const egfrGaugeColors = resolveClearanceGaugeColors(egfrScaledPercentage);
 
-  const hasBlackboxProdrugAlert = block.alerts.some(
+  const hasBlackboxProdrugAlert = block?.alerts?.some(
     (safetyAlert) => safetyAlert.code === 'BLACKBOX_INEFFICACY' || safetyAlert.severity === 1
   );
 
