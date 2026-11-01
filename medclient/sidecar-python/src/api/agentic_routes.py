@@ -112,13 +112,43 @@ def execute_agent_action(
     action_parameter_map = action.action_parameters
 
     try:
-        if action_type in ["EVALUATE_RED_FLAGS", "EVALUATE_VITALS"]:
+        if action_type in ["EVALUATE_NLI",
+            "EVALUATE_RED_FLAGS", "EVALUATE_VITALS"]:
             interceptor = getattr(request.app.state, "red_flags_interceptor", None)
             if not interceptor:
                 from ..implementations.red_flags import RedFlagsInterceptor
                 interceptor = RedFlagsInterceptor()
             red_flags_outcome = interceptor.evaluate(action_parameter_map)
             return AgentExecuteResponse(success=True, action_type=action_type, execution_outcome=red_flags_outcome)
+
+        elif action_type == "EVALUATE_NLI":
+            from ..implementations.nli_cross_encoder import NLICrossEncoderEvaluator
+            evaluator = getattr(request.app.state, "nli_evaluator", None)
+            if not evaluator:
+                evaluator = NLICrossEncoderEvaluator()
+
+            premise = action_parameter_map.get("premise", "")
+            hypothesis = action_parameter_map.get("hypothesis", "")
+
+            atomic_concepts = [{
+                "id": "open_response",
+                "hypothesis": premise,
+                "weight": 1.0,
+                "is_critical": True
+            }]
+
+            evaluation_result = evaluator.evaluate_response(student_text=hypothesis, atomic_concepts=atomic_concepts)
+            is_correct = evaluation_result.get("passed", False)
+
+            return AgentExecuteResponse(
+                success=True,
+                action_type=action_type,
+                execution_outcome={
+                    "is_correct": is_correct,
+                    "feedback": "NLI Evaluation Completed",
+                    "nli_details": evaluation_result
+                }
+            )
 
         elif action_type == "CALCULATE_EGFR":
             from ..implementations.ckd_epi import CKDEPI2021Calculator
@@ -204,6 +234,7 @@ def get_agent_schema(request: Request, x_tauri_ipc_secret: Optional[str] = Heade
     return {
         "version": "1.0.0",
         "supported_actions": [
+            "EVALUATE_NLI",
             "EVALUATE_RED_FLAGS",
             "EVALUATE_VITALS",
             "CALCULATE_EGFR",
