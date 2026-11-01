@@ -156,6 +156,15 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     expect(screen.getByTestId('webgl-canvas-container-CLOPIDOGREL_01')).toBeTruthy();
   });
 
+  // We must mock the fetch logic in store to avoid overwriting our sample state on mount
+  beforeAll(() => {
+    useMedClientStore.setState({
+      evaluatePharmacologySafety: async () => {},
+      evaluateDifferentialDiagnosis: async () => {},
+      fetchClinicalSheet: async () => {},
+      submitExamEvaluation: async () => {},
+    });
+  });
   it('F41, F43, F44, F45, F46 MedClientAppShell retains all 4 views in DOM via CSS visibility and handles interactions', async () => {
     const sampleDrugSafety = {
       block_type: 'DrugSafetyBlock' as const,
@@ -184,6 +193,9 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     });
 
     act(() => { render(<MedClientAppShell />); });
+    useMedClientStore.setState({ liveDrugSafety: sampleDrugSafety });
+
+    render(<MedClientAppShell />);
 
     // Rule 8: All 4 views exist simultaneously in the DOM
     const sheetView = screen.getByTestId('dom-retained-view-clinical_sheet');
@@ -200,6 +212,7 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     act(() => {
       fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
     });
+    fireEvent.click(screen.getByTestId('nav-tab-symptom_matcher'));
     expect(symptomView.className).toContain('block');
     expect(sheetView.className).toContain('hidden');
 
@@ -213,6 +226,7 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
       useMedClientStore.setState({ activeTab: 'drug_safety', liveDrugSafety: sampleDrugSafety as any, activeMedications: ['Clopidogrel', 'Omeprazole'] });
       fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
     });
+    fireEvent.click(screen.getByTestId('nav-tab-drug_safety'));
     expect(drugView.className).toContain('block');
     expect(screen.getByTestId('blackbox-prodrug-alert')).toBeTruthy();
     expect(screen.getByTestId('cyp-gauge-CYP2C19')).toBeTruthy();
@@ -220,6 +234,7 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     // Verify Hotspot & DAG ExamSimulator modes
     act(() => {
       render(
+    render(
       <ExamSimulatorBlockView
         block={{
           block_type: 'AnatomicalHotspotBlock',
@@ -245,6 +260,10 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
         clientX: 200,
         clientY: 100,
       });
+    );
+    fireEvent.click(screen.getByTestId('hotspot-interactive-canvas'), {
+      clientX: 200,
+      clientY: 100,
     });
     expect(screen.getByTestId('hotspot-hit-feedback').textContent).toContain('HIT');
   });

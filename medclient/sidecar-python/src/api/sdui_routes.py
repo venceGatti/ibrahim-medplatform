@@ -44,6 +44,8 @@ import hmac
 
 def verify_tauri_ipc_secret(request: Request, x_tauri_ipc_secret: Optional[str] = Header(None)) -> None:
     """Fail-closed verification of ephemeral IPC secret token passed via request header (ROA-23)."""
+    if request.method == "OPTIONS":
+        return
     expected_token = getattr(request.app.state, "ipc_token", None) or os.environ.get("MEDCLIENT_IPC_TOKEN")
     if not expected_token or not x_tauri_ipc_secret or not hmac.compare_digest(str(x_tauri_ipc_secret).encode("utf-8"), str(expected_token).encode("utf-8")):
         raise HTTPException(

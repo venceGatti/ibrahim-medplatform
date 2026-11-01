@@ -231,6 +231,8 @@ export const MedClientAppShell: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <input
+              id="global-search-input"
+              name="global_search"
               type="search"
               value={searchQuery}
               onChange={(ev) => setSearchQuery(ev.target.value)}
