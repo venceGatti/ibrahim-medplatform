@@ -90,18 +90,12 @@ export const ExamSimulatorBlockView: React.FC<ExamSimulatorBlockViewProps> = ({ 
       return;
     }
     try {
-      const evaluationResult = await sidecarIpcClient.evaluateExam<ExamSimulatorBlock>({
-        item_type: 'NLI_OPEN',
-        item_data: {
-          question_id: questionId,
-          reference_premise: questionSpec.reference_premise ?? '',
-          entailment_threshold: questionSpec.entailment_threshold ?? 0.7,
-        },
-        user_selection: trimmedHypothesis,
-        fsrs_card_state: block.fsrs_card_state,
+      const evaluationResult = await sidecarIpcClient.executeAction('EVALUATE_NLI', {
+        premise: questionSpec.reference_premise ?? '',
+        hypothesis: trimmedHypothesis,
       });
 
-      const outcomeData = (evaluationResult.item_data as Record<string, unknown>)?.evaluation_outcome as
+      const outcomeData = (evaluationResult as any).execution_outcome as
         | { is_correct?: boolean; feedback?: string }
         | undefined;
 
