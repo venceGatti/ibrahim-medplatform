@@ -1,0 +1,11 @@
+--- medclient/frontend-react/src/__tests__/frontendSdui.test.tsx
++++ medclient/frontend-react/src/__tests__/frontendSdui.test.tsx
+@@ -11,7 +11,7 @@
+   render,
+   screen,
+ } from '@testing-library/react';
+-import { describe, expect, it } from 'vitest';
++import { describe, expect, it, beforeEach } from 'vitest';
+
+ import {
+   evaluateHotspotHitWithTolerance,
