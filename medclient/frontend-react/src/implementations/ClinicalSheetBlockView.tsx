@@ -14,7 +14,7 @@ export function resolveCalloutThemeClasses(severity: CalloutSeverity): string {
     return 'border-rose-600 bg-rose-600/10 text-rose-100';
   }
   if (severity === 'BLACKBOX') {
-    return 'border-amber-500/20 bg-amber-950/40 text-amber-200 ring-1 ring-amber-500/20';
+    return 'border-amber-500 bg-amber-500/10 text-amber-200';
   }
   if (severity === 'WARNING') {
     return 'border-amber-500 bg-amber-500/10 text-amber-200';

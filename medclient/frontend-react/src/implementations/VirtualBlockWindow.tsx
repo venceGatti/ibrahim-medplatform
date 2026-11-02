@@ -66,6 +66,19 @@ export interface VirtualBlockWindowProps {
   readonly onScrollOffsetChange?: (scrollTopPx: number) => void;
 }
 
+const renderInlineMarkdown = (text: string): React.ReactNode[] => {
+  const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
+  return parts.map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index}>{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+    return <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+};
+
 export const VirtualBlockWindow: React.FC<VirtualBlockWindowProps> = ({
   paragraphs,
   viewportHeightPx = 420,
@@ -120,14 +133,14 @@ export const VirtualBlockWindow: React.FC<VirtualBlockWindowProps> = ({
             return (
               <div
                 key={`virtual-row-${absoluteIndex}`}
-                style={{ minHeight: `${Math.max(24, rowHeightPx)}px` }}
+                style={{ minHeight: `${Math.max(24, rowHeightPx)}px`, contain: 'layout style paint' }}
                 className="sdui-virtual-row flex items-center border-b border-slate-900/60 px-2 py-1 text-sm text-slate-200"
                 data-testid="virtual-mounted-node"
               >
                 {isHeading ? (
-                  <h3 className="font-bold text-blue-300">{cleanedText}</h3>
+                  <h3 className="font-bold text-blue-300">{renderInlineMarkdown(cleanedText)}</h3>
                 ) : (
-                  <p className="leading-relaxed">{cleanedText}</p>
+                  <p className="leading-relaxed">{renderInlineMarkdown(cleanedText)}</p>
                 )}
               </div>
             );

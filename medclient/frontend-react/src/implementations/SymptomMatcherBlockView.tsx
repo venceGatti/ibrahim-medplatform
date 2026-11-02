@@ -234,10 +234,13 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
       </div>
 
       <div className="flex flex-wrap gap-2.5" data-testid="active-symptom-tags">
-        {Object.entries(selectedSymptoms).map(([hpoCode, polarity]) => {
-          const isPresent = polarity === 'PRESENT';
-          return (
-            <div
+        {Object.keys(selectedSymptoms).length === 0 ? (
+          <p className="text-xs italic text-slate-500">Nessuna selezione...</p>
+        ) : (
+          Object.entries(selectedSymptoms).map(([hpoCode, polarity]) => {
+            const isPresent = polarity === 'PRESENT';
+            return (
+              <div
               key={hpoCode}
               className={`flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-bold shadow-sm transition ${
                 isPresent
@@ -274,17 +277,18 @@ export const SymptomMatcherBlockView: React.FC<SymptomMatcherBlockViewProps> = (
                   {hpoCode}: {isPresent ? 'PRESENTE' : 'NEGATIVO PERTINENTE'}
                 </span>
               </button>
-              <button
-                type="button"
-                onClick={() => removeSymptom(hpoCode)}
-                className="ml-1 text-slate-400 hover:text-white"
-                aria-label={`Rimuovi ${hpoCode}`}
-              >
-                ×
-              </button>
-            </div>
-          );
-        })}
+                <button
+                  type="button"
+                  onClick={() => removeSymptom(hpoCode)}
+                  className="ml-1 text-slate-400 hover:text-white"
+                  aria-label={`Rimuovi ${hpoCode}`}
+                >
+                  ×
+                </button>
+              </div>
+            );
+          })
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">

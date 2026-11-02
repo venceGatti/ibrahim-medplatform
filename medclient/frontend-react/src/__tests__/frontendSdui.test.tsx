@@ -228,8 +228,8 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
     });
 
     expect(drugView.className).toContain('block');
-    // expect(screen.getByTestId('blackbox-prodrug-alert')).toBeTruthy();
-    // expect(screen.getByTestId('cyp-gauge-CYP2C19')).toBeTruthy();
+    expect(screen.getByTestId('blackbox-prodrug-alert')).toBeTruthy();
+    expect(screen.getByTestId('cyp-gauge-CYP2C19')).toBeTruthy();
 
     // Verify Hotspot & DAG ExamSimulator modes
     act(() => {
@@ -286,7 +286,7 @@ describe('WP-4 MedClient React 19 SDUI & Engine Suite (F41-F48)', () => {
   it('UI/UX Clinical Ergonomics & Visual Interaction Hardening validates callouts, keyboard combobox, FDC and hotspot ring', () => {
     // 1. Clinical Sheet Callouts & High-Contrast Themes
     expect(resolveCalloutThemeClasses('RED_FLAG')).toContain('rose-600');
-    expect(resolveCalloutThemeClasses('BLACKBOX')).toContain('amber-500/20');
+    expect(resolveCalloutThemeClasses('BLACKBOX')).toContain('amber-500 bg-amber-500/10 text-amber-200');
     expect(resolveCalloutThemeClasses('CLINICAL_PEARL')).toContain('sky-600');
     expect(resolveCalloutBadgeClasses('RED_FLAG')).toContain('bg-rose-600');
     expect(resolveCalloutBadgeClasses('BLACKBOX')).toContain('bg-amber-500');
