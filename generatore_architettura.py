@@ -18,13 +18,15 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Dict
 
-from srs_catalog import ALL_SRS_MODULES, SRSModuleDefinition
+from srs_catalog import ALL_SRS_MODULES, SRSModuleDefinition, DATA_SOURCES_REGISTRY
 from srs_generator import (
     AsyncGeminiOrchestrator,
     generate_traceability_matrix_markdown,
 )
+from srs_generator.mock_scanner import audit_codebase_gaps
+from srs_generator.remediation_prompt import build_remediation_prompt
 
 # Configurazione encoding UTF-8 per console Windows
 if sys.platform.startswith("win"):
@@ -55,12 +57,25 @@ async def process_module(
     target_file_path: Path,
     index: int,
     total: int,
+    is_remediation: bool = False,
+    findings: list = None
 ) -> None:
     """Elabora un singolo macro-modulo e ne esegue l'append atomico sul file di output."""
     print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...", flush=True)
     start_time = time.time()
 
-    generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
+    if is_remediation:
+        # Costruisce il prompt specifico per la remediation se in modalità remediation
+        prompt = build_remediation_prompt(module_item, findings or [], DATA_SOURCES_REGISTRY)
+        # Qui potremmo iniettarlo in orchestrator (per ora in offline_mode diamo output fisso)
+        if getattr(orchestrator, "is_offline_mode", False):
+            generated_content = f"### {module_item.titolo_capitolo}\n\nContenuto di test offline.\n"
+            generated_content += f"Gap coperti: {', '.join(module_item.remediates)}\n"
+            generated_content += f"Fonti usate: {', '.join(module_item.data_sources)}\n"
+        else:
+            generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
+    else:
+        generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
 
     # Scrittura in append protetto con flush
     with open(target_file_path, "a", encoding="utf-8") as file_append_handle:
@@ -79,6 +94,7 @@ async def run_pipeline(
     model_name: str,
     workers_count: int,
     audit_only: bool,
+    is_remediation: bool,
 ) -> int:
     """Esegue la pipeline di generazione ed audit dell'architettura di sistema."""
     print("=" * 80)
@@ -113,10 +129,31 @@ async def run_pipeline(
         existing_module_codes = inspect_existing_modules(output_path)
         print(f"[SRS-PIPELINE] Moduli già archiviati nel documento: {len(existing_module_codes)}")
 
-        modules_to_generate: List[SRSModuleDefinition] = [
+    if is_remediation:
+        print("[SRS-PIPELINE] Avvio Scansione MOCK nella codebase...")
+        findings = audit_codebase_gaps(Path("."))
+        print(f"[SRS-PIPELINE] Trovati {len(findings)} mock/gap cablati.")
+
+        # Scrive l'inventario nel file
+        with open(output_path, "a", encoding="utf-8") as f_inv:
+            f_inv.write("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n\n")
+            f_inv.write("| ID | Severità | File | Riga | Dettaglio |\n")
+            f_inv.write("|---|---|---|---|---|\n")
+            for fd in findings:
+                f_inv.write(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |\n")
+            f_inv.write("\n---\n\n")
+
+        modules_to_generate = [m for m in ALL_SRS_MODULES if m.area_name == "Real_Data_Remediation" or m.area_name == "Curriculum_Docimology"]
+    else:
+        modules_to_generate = [
             mod for mod in ALL_SRS_MODULES if mod.module_code not in existing_module_codes
         ]
 
+    findings = []
+    if is_remediation:
+        findings = audit_codebase_gaps(Path("."))
+
+    if getattr(locals(), 'modules_to_generate', None) is not None:
         if not modules_to_generate:
             print("[SRS-PIPELINE] Tutti i 26 macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
         else:
@@ -131,7 +168,7 @@ async def run_pipeline(
             total_to_process = len(modules_to_generate)
             # Esecuzione asincrona con semaforo
             tasks = [
-                process_module(mod, orchestrator, output_path, idx, total_to_process)
+                process_module(mod, orchestrator, output_path, idx, total_to_process, is_remediation, findings)
                 for idx, mod in enumerate(modules_to_generate, start=1)
             ]
             await asyncio.gather(*tasks)
@@ -187,9 +224,17 @@ def main() -> None:
         default=False,
         help="Esegue unicamente l'audit ricorsivo e appende la matrice di conformità",
     )
+    parser.add_argument(
+        "--remediation",
+        action="store_true",
+        default=False,
+        help="Avvia il piano di remediation MOCK/DATI REALI",
+    )
 
     arguments = parser.parse_args()
     target_path = Path(arguments.output).resolve()
+    if arguments.remediation and arguments.output == "SRS_MedClient_Architettura_Completa.md":
+        target_path = Path("PROGETTAZIONE_REMEDIATION_DATI_REALI.md").resolve()
 
     exit_code = asyncio.run(
         run_pipeline(
@@ -198,6 +243,7 @@ def main() -> None:
             model_name=arguments.model,
             workers_count=arguments.workers,
             audit_only=arguments.audit_only,
+            is_remediation=arguments.remediation,
         )
     )
     sys.exit(exit_code)

@@ -20,6 +20,10 @@ class SRSModuleDefinition:
     area_name: str
     applicable_roas: List[str] = field(default_factory=list)
     direttive: str = ""
+    remediates: List[str] = field(default_factory=list)
+    data_sources: List[str] = field(default_factory=list)
+    target_paths: List[str] = field(default_factory=list)
+    acceptance_tests: List[str] = field(default_factory=list)
 
     def to_legacy_dict(self) -> Dict[str, str]:
         """Converte la definizione nel formato dizionario compatibile con i runner storici."""
@@ -31,3 +35,19 @@ class SRSModuleDefinition:
             "applicable_roas": ", ".join(self.applicable_roas),
         }
 
+
+
+@dataclass(frozen=True)
+class DataSourceSpec:
+    key: str
+    name: str
+    url: str
+    license: str
+    format: str
+    auth: str
+    rate_limit: str
+    update_cadence: str
+    sha256_policy: str
+    target_tables: List[str] = field(default_factory=list)
+    offline_strategy: str = ""
+    license_risk: bool = False
