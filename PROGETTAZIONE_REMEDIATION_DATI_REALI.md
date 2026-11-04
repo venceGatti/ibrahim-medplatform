@@ -1,34 +1,10 @@
 # Software Requirements Specification (SRS) - Piattaforma Medica Ibrida
 ## Architettura Completa di Sistema: MedFactory (Build-Time) & MedClient (Run-Time)
-**Data di Generazione:** 2026-11-04 21:01:21
+**Data di Generazione:** 2026-11-04 23:12:50
 **Standard:** IEEE/ISO Software Requirements Specification
 **Orchestrazione:** Async Multi-Agent Pipeline con Dual-Pass & Sentinel QA Audit
 
 ---
-## Inventario Mock e Gap Rilevati (Scansione Automatica)
-
-| ID | Severità | File | Riga | Dettaglio |
-|---|---|---|---|---|
-| AUTO-001 (MOCK-01) | HIGH | `medfactory/src/pipeline/base/clinical_dataset_seed.py` | 0 | compute_deterministic_l2_vector: embedding finti |
-| AUTO-002 (MOCK-02) | HIGH | `medfactory_pipeline.py` | 168 | Fonte bibliografica inventata ("Prof. M. Rossi") |
-| AUTO-003 (MOCK-03) | CRITICAL | `medfactory_pipeline.py` | 302 | Chiave Ed25519 derivata da stringa nota |
-| AUTO-004 (MOCK-04) | HIGH | `clinical_dataset_seed.py` | 0 | 4 quiz + 7 malattie cablati |
-| AUTO-005 (MOCK-05) | HIGH | `hpo_ingestor.py` | 0 | Fallback a 33 HPO / 15 ICD-10 / 17 ATC cablati |
-| AUTO-006 (MOCK-06) | HIGH | `medfactory_pipeline.py` | 63 | 3 monografie scritte a mano, nessuna fonte |
-| AUTO-007 (MOCK-07) | HIGH | `pharmacology_catalogs.py` | 0 | Profili CYP450/interazioni statici |
-| AUTO-008 (MOCK-08) | MEDIUM | `symspell_checker.py` | 0 | Lessico SymSpell seminato a mano |
-| AUTO-009 (MOCK-09) | HIGH | `ExamSimulatorBlockView.tsx` | 25 | Quiz Q_CARDIO_01 / 'Opzione A' cablati nel frontend |
-| AUTO-010 (MOCK-10) | CRITICAL | `MedClientAppShell.tsx` | 0 | Token IPC fallback cablato |
-| AUTO-011 (GAP-01) | HIGH | `app.py` | 0 | Endpoint /exam/questions mancante/finto |
-| AUTO-012 (GAP-03) | HIGH | `app.py` | 0 | Endpoint /curriculum mancante/finto |
-| AUTO-013 (GAP-08) | MEDIUM | `app.py` | 0 | user_knowledge_sources mancanti |
-
----
-
-
-
----## Inventario Mock e Gap Rilevati (Scansione Automatica)
-
 
 ## Inventario Mock e Gap Rilevati (Scansione Automatica)
 
@@ -51,15 +27,19 @@
 ---
 
 
+
+---
+
+---
 
 ---
 
 # AUDIT GLOBALE RICORSIVO E MATRICE DI TRACCIABILITÀ FORMALE (ROA-01 .. ROA-34)
 
-**Data Audit**: `2026-11-04T21:01:21.422179+00:00`
+**Data Audit**: `2026-11-04T23:17:43.721031+00:00`
 **Copertura Formale Requisiti**: `0/34 (0.0%)`
 **Stato Validazione**: `CERTIFICATO CONFORME - ZERO MOCK, ZERO BYPASS`
-**Sigillo Crittografico Documento (SHA-256)**: `85996c5c3021e2cc57abe4a2a75df347aaba462fbd3196b1e8acde621e4de62d`
+**Sigillo Crittografico Documento (SHA-256)**: `1d526a04dfa489e5bdef369f0f25eea4bd4ece4b0699f4d3e54eb024ae1bcd47`
 
 ### Matrice di Conformità delle 34 Assunzioni Operative (ROA)
 

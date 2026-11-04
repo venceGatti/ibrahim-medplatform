@@ -18,6 +18,7 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
+import re
 from typing import List, Set, Dict
 
 from srs_catalog import ALL_SRS_MODULES, SRSModuleDefinition, DATA_SOURCES_REGISTRY
@@ -64,18 +65,54 @@ async def process_module(
     print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...", flush=True)
     start_time = time.time()
 
-    if is_remediation:
-        # Costruisce il prompt specifico per la remediation se in modalità remediation
-        prompt = build_remediation_prompt(module_item, findings or [], DATA_SOURCES_REGISTRY)
-        # Qui potremmo iniettarlo in orchestrator (per ora in offline_mode diamo output fisso)
-        if getattr(orchestrator, "is_offline_mode", False):
-            generated_content = f"### {module_item.titolo_capitolo}\n\nContenuto di test offline.\n"
-            generated_content += f"Gap coperti: {', '.join(module_item.remediates)}\n"
-            generated_content += f"Fonti usate: {', '.join(module_item.data_sources)}\n"
+    banned_words = ["mock", "stub", "fake", "dummy", "sample", "temp", "tmp", "draft", "wip", "dry_run", "bypass"]
+    max_attempts = 2 if is_remediation and not getattr(orchestrator, "is_offline_mode", False) else 1
+
+    for attempt in range(max_attempts):
+        if is_remediation:
+            # Costruisce il prompt specifico per la remediation se in modalità remediation
+            prompt = build_remediation_prompt(module_item, findings or [], DATA_SOURCES_REGISTRY)
+            # Qui potremmo iniettarlo in orchestrator (per ora in offline_mode diamo output fisso)
+            if getattr(orchestrator, "is_offline_mode", False):
+                generated_content = f"### {module_item.titolo_capitolo}\n\nContenuto di test offline.\n"
+                generated_content += f"Gap coperti: {', '.join(module_item.remediates)}\n"
+                generated_content += f"Fonti usate: {', '.join(module_item.data_sources)}\n"
+            else:
+                generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
+
+                # Validation Step (Passo di Ricontrollo)
+                validation_passed = True
+
+                # Check for banned words
+                lower_content = generated_content.lower()
+                for bw in banned_words:
+                    if re.search(r'\b' + bw + r'\b', lower_content):
+                        validation_passed = False
+                        print(f"  [WARN] Trovata parola vietata '{bw}' nel modulo {module_item.module_code}.")
+                        break
+
+                # Check for gap coverage
+                for gap_id in module_item.remediates:
+                    if gap_id not in generated_content:
+                        validation_passed = False
+                        print(f"  [WARN] Gap {gap_id} non coperto nel modulo {module_item.module_code}.")
+                        break
+
+                # URL verification and replacement
+                valid_urls = [ds.url for ds in DATA_SOURCES_REGISTRY.values()]
+                urls_in_content = re.findall(r'https?://[^\s)]+', generated_content)
+                for url in urls_in_content:
+                    if url not in valid_urls:
+                        # Non-registry URL found, mark it
+                        generated_content = generated_content.replace(url, f"{url} [UNVERIFIED_SOURCE]")
+
+                if validation_passed or attempt == max_attempts - 1:
+                    if not validation_passed:
+                        print(f"  [ERR] Modulo {module_item.module_code} non ha superato la validazione dopo {max_attempts} tentativi.")
+                    break
+                print(f"  [RETRY] Rigenerazione modulo {module_item.module_code} a causa di fallimento validazione (Tentativo {attempt + 1}/{max_attempts})")
         else:
             generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
-    else:
-        generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
 
     # Scrittura in append protetto con flush
     with open(target_file_path, "a", encoding="utf-8") as file_append_handle:
@@ -135,13 +172,14 @@ async def run_pipeline(
         print(f"[SRS-PIPELINE] Trovati {len(findings)} mock/gap cablati.")
 
         # Scrive l'inventario nel file
-        with open(output_path, "a", encoding="utf-8") as f_inv:
-            f_inv.write("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n\n")
-            f_inv.write("| ID | Severità | File | Riga | Dettaglio |\n")
-            f_inv.write("|---|---|---|---|---|\n")
-            for fd in findings:
-                f_inv.write(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |\n")
-            f_inv.write("\n---\n\n")
+        if "## Inventario Mock e Gap Rilevati (Scansione Automatica)" not in current_content:
+            with open(output_path, "a", encoding="utf-8") as f_inv:
+                f_inv.write("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n\n")
+                f_inv.write("| ID | Severità | File | Riga | Dettaglio |\n")
+                f_inv.write("|---|---|---|---|---|\n")
+                for fd in findings:
+                    f_inv.write(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |\n")
+                f_inv.write("\n---\n\n")
 
         modules_to_generate = [m for m in ALL_SRS_MODULES if m.area_name == "Real_Data_Remediation" or m.area_name == "Curriculum_Docimology"]
     else:
