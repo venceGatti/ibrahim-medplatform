@@ -5,6 +5,30 @@
 **Orchestrazione:** Async Multi-Agent Pipeline con Dual-Pass & Sentinel QA Audit
 
 ---
+## Inventario Mock e Gap Rilevati (Scansione Automatica)
+
+| ID | Severità | File | Riga | Dettaglio |
+|---|---|---|---|---|
+| AUTO-001 (MOCK-01) | HIGH | `medfactory/src/pipeline/base/clinical_dataset_seed.py` | 0 | compute_deterministic_l2_vector: embedding finti |
+| AUTO-002 (MOCK-02) | HIGH | `medfactory_pipeline.py` | 168 | Fonte bibliografica inventata ("Prof. M. Rossi") |
+| AUTO-003 (MOCK-03) | CRITICAL | `medfactory_pipeline.py` | 302 | Chiave Ed25519 derivata da stringa nota |
+| AUTO-004 (MOCK-04) | HIGH | `clinical_dataset_seed.py` | 0 | 4 quiz + 7 malattie cablati |
+| AUTO-005 (MOCK-05) | HIGH | `hpo_ingestor.py` | 0 | Fallback a 33 HPO / 15 ICD-10 / 17 ATC cablati |
+| AUTO-006 (MOCK-06) | HIGH | `medfactory_pipeline.py` | 63 | 3 monografie scritte a mano, nessuna fonte |
+| AUTO-007 (MOCK-07) | HIGH | `pharmacology_catalogs.py` | 0 | Profili CYP450/interazioni statici |
+| AUTO-008 (MOCK-08) | MEDIUM | `symspell_checker.py` | 0 | Lessico SymSpell seminato a mano |
+| AUTO-009 (MOCK-09) | HIGH | `ExamSimulatorBlockView.tsx` | 25 | Quiz Q_CARDIO_01 / 'Opzione A' cablati nel frontend |
+| AUTO-010 (MOCK-10) | CRITICAL | `MedClientAppShell.tsx` | 0 | Token IPC fallback cablato |
+| AUTO-011 (GAP-01) | HIGH | `app.py` | 0 | Endpoint /exam/questions mancante/finto |
+| AUTO-012 (GAP-03) | HIGH | `app.py` | 0 | Endpoint /curriculum mancante/finto |
+| AUTO-013 (GAP-08) | MEDIUM | `app.py` | 0 | user_knowledge_sources mancanti |
+
+---
+
+
+
+---## Inventario Mock e Gap Rilevati (Scansione Automatica)
+
 
 ## Inventario Mock e Gap Rilevati (Scansione Automatica)
 
