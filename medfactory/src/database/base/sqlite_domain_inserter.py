@@ -301,7 +301,7 @@ class SQLiteDomainInserterMixin:
 
     def insert_exam_items(
         self,
-        exam_question_records: Sequence[Tuple[str, str, str, Union[str, Dict[str, Any]]]]
+        exam_question_records: Sequence[Tuple[str, str, str, Any]]
     ) -> None:
         cursor = self.conn.cursor()
         cursor.executemany(

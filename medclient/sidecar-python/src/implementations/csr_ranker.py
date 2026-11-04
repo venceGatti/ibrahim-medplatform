@@ -168,11 +168,11 @@ class SparseCSRLogOddsRanker(ILogOddsRanker):
                     continue
 
                 cluster_sum = 0.0
-                for f in cluster_present:
-                    w = feature_weight_map[f]
-                    f_code = self.idx_to_feature[f]
+                for f_idx in cluster_present:
+                    w = feature_weight_map[f_idx]
+                    f_code = self.idx_to_feature[f_idx]
                     # Dynamic pathognomonic override
-                    if pathognomonic_flags.get(f_code, False) or (d_idx, f) in self.pathognomonic_pairs:
+                    if pathognomonic_flags.get(f_code, False) or (d_idx, f_idx) in self.pathognomonic_pairs:
                         if (d_idx, f) not in self.pathognomonic_pairs:
                             w *= self.alpha_pat
                     cluster_sum += w
