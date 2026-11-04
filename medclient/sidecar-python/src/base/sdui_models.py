@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ConfigDict
 class CalloutSeverity(str, Enum):
     """Clinical callout visual severity tier."""
     RED_FLAG = "RED_FLAG"
+    BLACKBOX = "BLACKBOX"
     CONTRAINDICATION = "CONTRAINDICATION"
     EXAM_TIP = "EXAM_TIP"
     CLINICAL_PEARL = "CLINICAL_PEARL"
