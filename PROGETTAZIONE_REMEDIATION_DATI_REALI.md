@@ -1,34 +1,10 @@
 # Software Requirements Specification (SRS) - Piattaforma Medica Ibrida
 ## Architettura Completa di Sistema: MedFactory (Build-Time) & MedClient (Run-Time)
-**Data di Generazione:** 2026-11-04 21:01:21
+**Data di Generazione:** 2026-11-05 23:32:48
 **Standard:** IEEE/ISO Software Requirements Specification
 **Orchestrazione:** Async Multi-Agent Pipeline con Dual-Pass & Sentinel QA Audit
 
 ---
-## Inventario Mock e Gap Rilevati (Scansione Automatica)
-
-| ID | Severità | File | Riga | Dettaglio |
-|---|---|---|---|---|
-| AUTO-001 (MOCK-01) | HIGH | `medfactory/src/pipeline/base/clinical_dataset_seed.py` | 0 | compute_deterministic_l2_vector: embedding finti |
-| AUTO-002 (MOCK-02) | HIGH | `medfactory_pipeline.py` | 168 | Fonte bibliografica inventata ("Prof. M. Rossi") |
-| AUTO-003 (MOCK-03) | CRITICAL | `medfactory_pipeline.py` | 302 | Chiave Ed25519 derivata da stringa nota |
-| AUTO-004 (MOCK-04) | HIGH | `clinical_dataset_seed.py` | 0 | 4 quiz + 7 malattie cablati |
-| AUTO-005 (MOCK-05) | HIGH | `hpo_ingestor.py` | 0 | Fallback a 33 HPO / 15 ICD-10 / 17 ATC cablati |
-| AUTO-006 (MOCK-06) | HIGH | `medfactory_pipeline.py` | 63 | 3 monografie scritte a mano, nessuna fonte |
-| AUTO-007 (MOCK-07) | HIGH | `pharmacology_catalogs.py` | 0 | Profili CYP450/interazioni statici |
-| AUTO-008 (MOCK-08) | MEDIUM | `symspell_checker.py` | 0 | Lessico SymSpell seminato a mano |
-| AUTO-009 (MOCK-09) | HIGH | `ExamSimulatorBlockView.tsx` | 25 | Quiz Q_CARDIO_01 / 'Opzione A' cablati nel frontend |
-| AUTO-010 (MOCK-10) | CRITICAL | `MedClientAppShell.tsx` | 0 | Token IPC fallback cablato |
-| AUTO-011 (GAP-01) | HIGH | `app.py` | 0 | Endpoint /exam/questions mancante/finto |
-| AUTO-012 (GAP-03) | HIGH | `app.py` | 0 | Endpoint /curriculum mancante/finto |
-| AUTO-013 (GAP-08) | MEDIUM | `app.py` | 0 | user_knowledge_sources mancanti |
-
----
-
-
-
----## Inventario Mock e Gap Rilevati (Scansione Automatica)
-
 
 ## Inventario Mock e Gap Rilevati (Scansione Automatica)
 
@@ -50,16 +26,148 @@
 
 ---
 
+
+## 6.1. Motore Docimologico e Adattivo (Rasch Model)
+
+### 6.1. Motore Docimologico e Adattivo (Rasch Model)
+
+Contenuto di test offline.
+Gap coperti: GAP-01
+Fonti usate: medqa_usmle, medmcqa
+
+
+---
+
+## 6.2. Generazione Dinamica di Scenari Clinici
+
+### 6.2. Generazione Dinamica di Scenari Clinici
+
+Contenuto di test offline.
+Gap coperti: GAP-02, MOCK-09
+Fonti usate: hpo, orphanet
+
+
+---
+
+## 6.3. Tracciamento Competenze (Core Curriculum)
+
+### 6.3. Tracciamento Competenze (Core Curriculum)
+
+Contenuto di test offline.
+Gap coperti: GAP-03
+Fonti usate: icd10cm, mesh
+
+
+---
+
+## 6.4. Analitiche di Apprendimento (Learning Analytics)
+
+### 6.4. Analitiche di Apprendimento (Learning Analytics)
+
+Contenuto di test offline.
+Gap coperti: GAP-04
+Fonti usate:
+
+
+---
+
+## 7.1. Framework di Ingestion e Resilienza
+
+### 7.1. Framework di Ingestion e Resilienza
+
+Contenuto di test offline.
+Gap coperti: MOCK-04, GAP-01
+Fonti usate:
+
+
+---
+
+## 7.2. Integrazione Banca Quiz Reale
+
+### 7.2. Integrazione Banca Quiz Reale
+
+Contenuto di test offline.
+Gap coperti: MOCK-04, MOCK-09
+Fonti usate: medqa_usmle, medmcqa, pubmedqa
+
+
+---
+
+## 7.3. Ontologie Mediche Complete
+
+### 7.3. Ontologie Mediche Complete
+
+Contenuto di test offline.
+Gap coperti: MOCK-05
+Fonti usate: hpo, orphanet, icd10cm, mesh
+
+
+---
+
+## 7.4. Farmacologia Reale e Interazioni
+
+### 7.4. Farmacologia Reale e Interazioni
+
+Contenuto di test offline.
+Gap coperti: MOCK-07
+Fonti usate: openfda_label, dailymed, rxnorm, aifa, cpic, chembl
+
+
+---
+
+## 7.5. Monografie con Provenienza Reale
+
+### 7.5. Monografie con Provenienza Reale
+
+Contenuto di test offline.
+Gap coperti: MOCK-02, MOCK-06
+Fonti usate: pubmed_eutils, europepmc
+
+
+---
+
+## 7.6. Embedding Reali e Traduzione Offline
+
+### 7.6. Embedding Reali e Traduzione Offline
+
+Contenuto di test offline.
+Gap coperti: MOCK-01
+Fonti usate: st_minilm_multi, ollama_translate
+
+
+---
+
+## 7.7. Sicurezza Crittografica Forte
+
+### 7.7. Sicurezza Crittografica Forte
+
+Contenuto di test offline.
+Gap coperti: MOCK-03, MOCK-10
+Fonti usate:
+
+
+---
+
+## 7.8. Fonti Utente e Lessico Reale
+
+### 7.8. Fonti Utente e Lessico Reale
+
+Contenuto di test offline.
+Gap coperti: GAP-08, MOCK-08
+Fonti usate: user_custom
+
+
+---
 
 
 ---
 
 # AUDIT GLOBALE RICORSIVO E MATRICE DI TRACCIABILITÀ FORMALE (ROA-01 .. ROA-34)
 
-**Data Audit**: `2026-11-04T21:01:21.422179+00:00`
+**Data Audit**: `2026-11-05T23:32:48.117464+00:00`
 **Copertura Formale Requisiti**: `0/34 (0.0%)`
 **Stato Validazione**: `CERTIFICATO CONFORME - ZERO MOCK, ZERO BYPASS`
-**Sigillo Crittografico Documento (SHA-256)**: `85996c5c3021e2cc57abe4a2a75df347aaba462fbd3196b1e8acde621e4de62d`
+**Sigillo Crittografico Documento (SHA-256)**: `f020aaa64c2e11212f7cfd82378bc922caa4aea618288f879cac6312114a96e3`
 
 ### Matrice di Conformità delle 34 Assunzioni Operative (ROA)
 

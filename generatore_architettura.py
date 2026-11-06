@@ -153,7 +153,7 @@ async def run_pipeline(
     if is_remediation:
         findings = audit_codebase_gaps(Path("."))
 
-    if getattr(locals(), 'modules_to_generate', None) is not None:
+    if 'modules_to_generate' in locals():
         if not modules_to_generate:
             print("[SRS-PIPELINE] Tutti i 26 macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
         else:
@@ -166,9 +166,8 @@ async def run_pipeline(
                 orchestrator.is_offline_mode = True
 
             total_to_process = len(modules_to_generate)
-            # Esecuzione asincrona con semaforo
             tasks = [
-                process_module(mod, orchestrator, output_path, idx, total_to_process, is_remediation, findings)
+                process_module(mod, orchestrator, output_path, idx, total_to_process, is_remediation, locals().get('findings', []))
                 for idx, mod in enumerate(modules_to_generate, start=1)
             ]
             await asyncio.gather(*tasks)

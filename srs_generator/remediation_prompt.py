@@ -1,9 +1,3 @@
-"""
-srs_generator/remediation_prompt.py
-
-Costruisce il prompt per modulo con finding reali, schede fonti e schema SQLite.
-"""
-
 from typing import List, Dict
 from srs_catalog import SRSModuleDefinition
 from srs_catalog.models import DataSourceSpec
@@ -14,8 +8,6 @@ def build_remediation_prompt(
     findings: List[CodeGapFinding],
     sources: Dict[str, DataSourceSpec]
 ) -> str:
-    """Genera il prompt di system per la remediation di un modulo."""
-
     prompt = f"Sei un Architetto Software Specializzato in MedPlatform.\n\n"
     prompt += f"OBIETTIVO: Progettare la remediation per il modulo {module.module_code} - {module.titolo_capitolo}.\n"
     prompt += f"DIRETTIVE: {module.direttive}\n\n"

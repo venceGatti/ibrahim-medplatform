@@ -24,6 +24,10 @@ class SRSModuleDefinition:
     data_sources: List[str] = field(default_factory=list)
     target_paths: List[str] = field(default_factory=list)
     acceptance_tests: List[str] = field(default_factory=list)
+    remediates: List[str] = field(default_factory=list)
+    data_sources: List[str] = field(default_factory=list)
+    target_paths: List[str] = field(default_factory=list)
+    acceptance_tests: List[str] = field(default_factory=list)
 
     def to_legacy_dict(self) -> Dict[str, str]:
         """Converte la definizione nel formato dizionario compatibile con i runner storici."""
