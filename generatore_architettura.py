@@ -51,6 +51,7 @@ def inspect_existing_modules(target_file_path: Path) -> Set[str]:
     return found_titles
 
 
+
 async def process_module(
     module_item: SRSModuleDefinition,
     orchestrator: AsyncGeminiOrchestrator,
@@ -60,24 +61,57 @@ async def process_module(
     is_remediation: bool = False,
     findings: list = None
 ) -> None:
-    """Elabora un singolo macro-modulo e ne esegue l'append atomico sul file di output."""
+    '''Elabora un singolo macro-modulo e ne esegue l'append atomico sul file di output.'''
     print(f"[{index}/{total}] Elaborazione Modulo {module_item.module_code}: {module_item.titolo_capitolo}...", flush=True)
     start_time = time.time()
 
-    if is_remediation:
-        # Costruisce il prompt specifico per la remediation se in modalità remediation
-        prompt = build_remediation_prompt(module_item, findings or [], DATA_SOURCES_REGISTRY)
-        # Qui potremmo iniettarlo in orchestrator (per ora in offline_mode diamo output fisso)
-        if getattr(orchestrator, "is_offline_mode", False):
-            generated_content = f"### {module_item.titolo_capitolo}\n\nContenuto di test offline.\n"
-            generated_content += f"Gap coperti: {', '.join(module_item.remediates)}\n"
-            generated_content += f"Fonti usate: {', '.join(module_item.data_sources)}\n"
+    banned_patterns = ["mock", "stub", "fake", "dummy", "sample", "temp", "tmp", "draft", "wip", "dry_run", "bypass"]
+
+    max_attempts = 2
+    generated_content = ""
+
+    for attempt in range(max_attempts):
+        if is_remediation:
+            prompt = build_remediation_prompt(module_item, findings or [], DATA_SOURCES_REGISTRY)
+
+            if getattr(orchestrator, "is_offline_mode", False):
+                generated_content = f"### {module_item.titolo_capitolo}\n\nContenuto di test offline.\n"
+                generated_content += f"Gap coperti: {', '.join(module_item.remediates)}\n"
+                generated_content += f"Fonti usate: {', '.join(module_item.data_sources)}\n"
+                for ds in module_item.data_sources:
+                    if ds in DATA_SOURCES_REGISTRY:
+                        generated_content += f"URL: {DATA_SOURCES_REGISTRY[ds].url}\n"
+            else:
+                generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
         else:
             generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
-    else:
-        generated_content = await orchestrator.generate_chapter_dual_pass(module_item)
 
-    # Scrittura in append protetto con flush
+        qa_passed = True
+
+        if is_remediation:
+            for rem in module_item.remediates:
+                if rem not in generated_content:
+                    print(f"  [QA FAIL] Gap {rem} non menzionato.")
+                    qa_passed = False
+
+        import re as re_mod
+        urls = re_mod.findall(r'https?://[^\s<>"]+|www\.[^\s<>"]+', generated_content)
+        valid_urls = [ds.url for ds in DATA_SOURCES_REGISTRY.values()]
+        for url in urls:
+            if url not in valid_urls and url != "localhost:11434":
+                generated_content = generated_content.replace(url, f"{url} (UNVERIFIED_SOURCE)")
+
+        lower_content = generated_content.lower()
+        for banned in banned_patterns:
+            if re_mod.search(r'\b' + banned + r'\b', lower_content):
+                print(f"  [QA FAIL] Trovata parola vietata: {banned}")
+                qa_passed = False
+                break
+
+        if qa_passed or attempt == max_attempts - 1:
+            break
+        print(f"  [QA RETRY] Rigenerazione del capitolo ({attempt + 1}/{max_attempts})...")
+
     with open(target_file_path, "a", encoding="utf-8") as file_append_handle:
         file_append_handle.write(f"\n## {module_item.titolo_capitolo}\n\n")
         file_append_handle.write(generated_content)
@@ -86,6 +120,7 @@ async def process_module(
 
     elapsed = time.time() - start_time
     print(f"  [OK] Modulo {module_item.module_code} completato e archiviato in {elapsed:.2f}s.", flush=True)
+
 
 
 async def run_pipeline(
@@ -192,6 +227,7 @@ async def run_pipeline(
     return 0
 
 
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generatore e Curatore SRS Multi-Agente MedPlatform")
     parser.add_argument(
@@ -230,11 +266,28 @@ def main() -> None:
         default=False,
         help="Avvia il piano di remediation MOCK/DATI REALI",
     )
+    parser.add_argument(
+        "--audit-gaps",
+        action="store_true",
+        default=False,
+        help="Esegue lo scanner forense dei mock e termina",
+    )
 
     arguments = parser.parse_args()
     target_path = Path(arguments.output).resolve()
     if arguments.remediation and arguments.output == "SRS_MedClient_Architettura_Completa.md":
         target_path = Path("PROGETTAZIONE_REMEDIATION_DATI_REALI.md").resolve()
+
+    if arguments.audit_gaps:
+        print("[SRS-PIPELINE] Avvio Scansione MOCK nella codebase...")
+        from srs_generator.mock_scanner import audit_codebase_gaps
+        findings = audit_codebase_gaps(Path("."))
+        print("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n")
+        print("| ID | Severità | File | Riga | Dettaglio |")
+        print("|---|---|---|---|---|")
+        for fd in findings:
+            print(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |")
+        return
 
     exit_code = asyncio.run(
         run_pipeline(
@@ -247,7 +300,5 @@ def main() -> None:
         )
     )
     sys.exit(exit_code)
-
-
 if __name__ == "__main__":
     main()
