@@ -13,12 +13,14 @@ from __future__ import annotations
 from typing import Dict, List
 import argparse
 import sys
+from pathlib import Path
 from srs_catalog import (
     ALL_SRS_MODULES,
     MASTER_PLAN_MODULES,
     SRSModuleDefinition,
     DATA_SOURCES_REGISTRY,
 )
+from srs_generator.mock_scanner import audit_codebase_gaps
 
 __all__ = [
     "ALL_SRS_MODULES",
@@ -53,8 +55,19 @@ if __name__ == "__main__":
         for mod in ALL_SRS_MODULES:
             for rem in mod.remediates:
                 gaps_covered.add(rem)
+
+        findings = audit_codebase_gaps(Path("."))
+        all_detected_gaps = {f.gap_ref for f in findings if f.gap_ref != "UNKNOWN-GAP"}
+
         print(f"  Gap e Mock coperti ({len(gaps_covered)}): {', '.join(sorted(gaps_covered))}")
-        # Simplistic check for mock completeness - in real scenario, cross-reference with scanner
+        print(f"  Gap rilevati dal mock_scanner ({len(all_detected_gaps)}): {', '.join(sorted(all_detected_gaps))}")
+
+        uncovered_gaps = all_detected_gaps - gaps_covered
+        if uncovered_gaps:
+            print(f"[ERRORE] Sono stati rilevati GAP non coperti da alcun modulo: {', '.join(uncovered_gaps)}")
+            sys.exit(1)
+
+        print("[OK] Tutti i gap rilevati sono coperti dai moduli.")
         sys.exit(0)
 
     # Default behavior if no args passed
