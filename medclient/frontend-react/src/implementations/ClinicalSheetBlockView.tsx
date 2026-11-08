@@ -19,7 +19,7 @@ export function resolveCalloutThemeClasses(severity: CalloutSeverity): string {
   if (severity === 'WARNING') {
     return 'border-amber-500 bg-amber-500/10 text-amber-200';
   }
-  if (severity === 'CLINICAL_PEARL') {
+  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
     return 'border-sky-600 bg-sky-600/10 text-sky-100';
   }
   return 'border-blue-500 bg-blue-500/10 text-blue-100';
@@ -32,7 +32,7 @@ export function resolveCalloutBadgeClasses(severity: CalloutSeverity): string {
   if (severity === 'BLACKBOX') {
     return 'bg-amber-500 text-slate-950 font-black';
   }
-  if (severity === 'CLINICAL_PEARL') {
+  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
     return 'bg-sky-600 text-white';
   }
   if (severity === 'WARNING') {
@@ -78,7 +78,7 @@ function renderCalloutIcon(severity: CalloutSeverity): React.ReactNode {
       </svg>
     );
   }
-  if (severity === 'CLINICAL_PEARL') {
+  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
     return (
       <svg
         className="h-5 w-5 shrink-0 text-sky-400"
