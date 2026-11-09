@@ -71,17 +71,17 @@ class DifferentialCandidate(BaseModel):
             return new_vals
         return values
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def disease_id(self) -> str:
         return self.icd10_code
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def name(self) -> str:
         return self.disease_name
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def probability(self) -> float:
         return self.posterior_probability
@@ -97,27 +97,27 @@ class NextBestQuestion(BaseModel):
     expected_information_gain: float
     clinical_justification: str
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def feature_code(self) -> str:
         return self.target_hpo_id
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def question_id(self) -> str:
         return self.target_hpo_id
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def text(self) -> str:
         return self.target_phenotype_label
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def hpo_id(self) -> str:
         return self.target_hpo_id
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def information_gain_bits(self) -> float:
         return self.expected_information_gain

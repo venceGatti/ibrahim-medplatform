@@ -36,13 +36,13 @@ class AgentExecuteRequest(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def populate_action_parameters(cls, action_parameters: Any) -> Any:
-        if isinstance(action_parameters, dict):
-            if "payload" in action_parameters and "action_parameters" not in action_parameters:
-                normalized_map = dict(action_parameters)
+    def populate_action_parameters(cls, raw_action_input: Any) -> Any:
+        if isinstance(raw_action_input, dict):
+            if "payload" in raw_action_input and "action_parameters" not in raw_action_input:
+                normalized_map = dict(raw_action_input)
                 normalized_map["action_parameters"] = normalized_map.pop("payload")
                 return normalized_map
-        return action_parameters
+        return raw_action_input
 
 
 class AgentExecuteResponse(BaseModel):
@@ -61,7 +61,7 @@ class AgentExecuteResponse(BaseModel):
     def serialize_outcome_envelope(self, serializer_handler: Any) -> Dict[str, Any]:
         serialized_envelope = serializer_handler(self)
         if "execution_outcome" in serialized_envelope:
-            serialized_envelope["result"] = serialized_envelope["execution_outcome"]
+            serialized_envelope["execution_outcome_map"] = serialized_envelope["execution_outcome"]
         return serialized_envelope
 
 

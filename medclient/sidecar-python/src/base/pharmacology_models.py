@@ -57,22 +57,22 @@ class InteractionDetail(BaseModel):
             return new_vals
         return values
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def drug_a(self) -> str:
         return self.source_atc
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def drug_b(self) -> str:
         return self.target_atc
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def level(self) -> int:
         return int(self.severity)
 
-    @computed_field
+    @computed_field  # type: ignore
     @property
     def is_prodrug_bioactivation_block(self) -> bool:
         mech = self.mechanism.lower()

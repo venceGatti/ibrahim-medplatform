@@ -16,15 +16,22 @@ export type SupportedBlockType = CanonicalBlockType | LegacyAliasBlockType;
 export type CalloutSeverity =
   | 'RED_FLAG'
   | 'BLACKBOX'
+  | 'CONTRAINDICATION'
+  | 'EXAM_TIP'
   | 'CLINICAL_PEARL'
   | 'INFO'
   | 'WARNING'
-  | 'CRITICAL';
+  | 'CRITICAL'
+  | 'EXAM_TIP';
 
 export interface ClinicalCallout {
   readonly severity: CalloutSeverity;
-  readonly message: string;
+  readonly message?: string;
+  readonly body_markdown?: string;
   readonly title?: string;
+  readonly icd10_refs?: readonly string[];
+  readonly hpo_refs?: readonly string[];
+  readonly atc_refs?: readonly string[];
 }
 
 export interface ClinicalSheetBlock {

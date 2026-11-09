@@ -165,6 +165,8 @@ def execute_agent_action(
             calc = QTcCalculator()
 
             qtc_calculation_outcome = calc.evaluate_qtc(
+            qtc_calc = QTcCalculator()
+            qtc_calculation_outcome = qtc_calc.evaluate_qtc(
                 prescribed_drugs=action_parameter_map.get("prescribed_drugs", []),
                 auc_ratios=action_parameter_map.get("auc_ratios", {}),
                 serum_potassium_meq_l=action_parameter_map.get("serum_potassium_meq_l", 4.0),
