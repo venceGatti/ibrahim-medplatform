@@ -14,13 +14,18 @@ from srs_catalog.area2_ingestion_nlp import AREA2_MODULES
 from srs_catalog.area3_diagnostic_emergency import AREA3_MODULES
 from srs_catalog.area4_pharmacology_safety import AREA4_MODULES
 from srs_catalog.area5_simulation_sdui import AREA5_MODULES
+from srs_catalog.area6_curriculum_docimology import AREA6_MODULES
+from srs_catalog.area7_real_data_remediation import AREA7_MODULES
+from srs_catalog.data_sources_registry import DATA_SOURCES_REGISTRY
 
 ALL_SRS_MODULES: List[SRSModuleDefinition] = (
     AREA1_MODULES +
     AREA2_MODULES +
     AREA3_MODULES +
     AREA4_MODULES +
-    AREA5_MODULES
+    AREA5_MODULES +
+    AREA6_MODULES +
+    AREA7_MODULES
 )
 
 MASTER_PLAN_MODULES: List[Dict[str, str]] = [
@@ -36,5 +41,8 @@ __all__ = [
     "AREA3_MODULES",
     "AREA4_MODULES",
     "AREA5_MODULES",
+    "AREA6_MODULES",
+    "AREA7_MODULES",
+    "DATA_SOURCES_REGISTRY",
 ]
 

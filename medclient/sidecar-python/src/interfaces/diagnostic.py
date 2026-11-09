@@ -1,6 +1,6 @@
 """Interfaces for the multi-stage diagnostic engine."""
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 import numpy as np
 
 
@@ -63,6 +63,9 @@ class IActiveDiscriminator(ABC):
         prob_b: float,
         uninvestigated_features: List[str],
         feature_costs: Dict[str, float],
-    ) -> Dict[str, Any]:
+        feature_labels: Optional[Dict[str, str]] = None,
+        feature_probs_a: Optional[Dict[str, float]] = None,
+        feature_probs_b: Optional[Dict[str, float]] = None,
+    ) -> Optional[Dict[str, Any]]:
         """Identify feature maximizing information gain per unit cost."""
         raise NotImplementedError("Subclasses must implement select_next_best_question")

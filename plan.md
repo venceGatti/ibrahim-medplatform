@@ -1,12 +1,33 @@
-1. **Fix missing dependency in Github Actions CI:**
-   - The user explicitly provided a CI failure log showing `ModuleNotFoundError: No module named 'psutil'` in `medclient/sidecar-python/src/api/agentic_routes.py`. The user asked me to "analyze the above information and fix the errors causing these CI failures". I added `psutil==6.1.1` to `medclient/sidecar-python/requirements.txt` to fix the CI.
-
-2. **Verify locally:**
-   - Use `cat medclient/sidecar-python/requirements.txt` to confirm `psutil` is added.
-
-3. **Run tests:**
-   - Run tests using `cd medclient/sidecar-python && python -m pytest tests/` to confirm tests pass locally. Tests passed!
-
-4. **Pre-commit and submit:**
-   - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
-   - Commit and submit the changes.
+1. **ROA-25: Fix `MolecularStructureViewer.tsx` network call**
+   - Replace external `fetch('https://files.rcsb.org/download/${pdbId}.pdb')` in `SRS_MedClient_Architettura_Completa.md` line 5587 with `fetch(pdbAssetUri)`. Verify file correctly modified using `read_file`.
+2. **ROA-26: Fix IEEE 754 NaN in Shannon Entropy**
+   - In `medclient/sidecar-python/src/implementations/active_discriminator.py`, update the `_binary_entropy(p)` function. Change `if p <= 0.0 or p >= 1.0: return 0.0` to `if p <= 1e-12 or p >= 1.0 - 1e-12: return 0.0`. Use `read_file` to verify edits.
+3. **ROA-27: Fix NLI ZeroDivisionError and Floor**
+   - In `medclient/sidecar-python/src/implementations/nli_cross_encoder.py`, inside `evaluate_response(self, student_text, atomic_concepts)`:
+     - Add `if sentence_count == 0:` check to return `{"final_score": 0.0, "overall_score": 0.0, "passed": False, "failed_critical_concepts": [], "critical_contradiction_triggered": False, "precision_factor": 0.0, "contradiction_penalty": 1.0, "concept_evaluations": []}`.
+     - Change `precision_factor = max(0.2, confirmed_sentence_count / max(1, sentence_count))` to `precision_factor = confirmed_sentence_count / max(1, sentence_count)`. Use `read_file` to verify edits.
+4. **ROA-28: Fix Hotspot Geometric Validation**
+   - In `medclient/frontend-react/src/base/hotspotGeometry.ts`:
+     - Inside `evaluateHotspotHitWithTolerance`, change `polygonVertices.length < 3` check to return `false` early. Add AABB pre-check logic (`const minU = Math.min(...polygonVertices.map(v => v[0])); const maxU = Math.max(...polygonVertices.map(v => v[0])); const minV = Math.min(...polygonVertices.map(v => v[1])); const maxV = Math.max(...polygonVertices.map(v => v[1])); if (pointU < minU - toleranceRadius || pointU > maxU + toleranceRadius || pointV < minV - toleranceRadius || pointV > maxV + toleranceRadius) return false;`) and shoelace formula check `let area = 0; for(let i=0; i<polygonVertices.length; i++) { area += (polygonVertices[i][0] * polygonVertices[(i+1)%polygonVertices.length][1] - polygonVertices[(i+1)%polygonVertices.length][0] * polygonVertices[i][1]) }; area = 0.5 * Math.abs(area); if (area < 1e-6) return false;`.
+   - Implement the same in `medclient/sidecar-python/src/implementations/hotspot_evaluator.py` inside `evaluate_hit`. Use `read_file` to verify edits.
+5. **ROA-29: Formalize CPIC Activity Score Matrix**
+   - Update `medclient/sidecar-python/src/implementations/cpic_engine.py` to extract alleles and map diplotypes to phenotypes. Add a helper `_calculate_activity_score(diplotype)` and `_phenotype_from_score(score)`. The mapping: Non-functional (*3, *4, *5, *6, *3A, *3C) -> 0.0, Reduced (*9, *10, *17, *41) -> 0.5, Normal (*1, *2) -> 1.0, Duplications (*1xN, *2xN) -> 2.0. Map AS to PM, IM, NM, UM. Use `read_file` to verify edits.
+6. **ROA-30: Reconcile DOM Retention and Virtual Windowing**
+   - No action needed: I verified using `read_file` that `ClinicalSheetBlockView.tsx` wraps only the Markdown paragraphs in `<VirtualBlockWindow />`, leaving the `callouts`, `mediaHashes`, and `MolecularStructureViewer` mounted in the DOM. This aligns correctly with the instruction.
+7. **ROA-31: FSRS Timestamps as Unix Epoch UTC (INTEGER)**
+   - Update `medclient/sidecar-python/src/implementations/fsrs_scheduler.py` inside `review_card` to convert `last_review` and `due_date` to Unix epoch integers: `last_review=int(now.timestamp())` and `due_date=int(due_date.timestamp())`.
+   - Also, in `review_card` around line 133, update `now` calculation if `review_time` or `last_review` is an integer: `if isinstance(card.last_review, int): card.last_review = datetime.fromtimestamp(card.last_review, timezone.utc)`. Update `medclient/sidecar-python/src/base/educational_models.py` schema `FSRSCardBase` changing `last_review` and `due_date` from `Optional[datetime]` to `Optional[int]`. Verify with `read_file`.
+8. **ROA-32: Dosage Normalization with DDD**
+   - In `medclient/sidecar-python/src/api/sdui_routes.py` line 440, in `evaluate_pharmacology_safety`, I will implement the therapeutic substitution logic. I will add a list `recommended_alternatives: List[TherapeuticAlternative] = []`. For each prescribed drug where an alert of severity 1 or 2 is generated (or unconditionally for testing DDD extraction), I will query the DB: `pool = getattr(request.app.state, 'db_pool', None)`. If pool exists, `with pool.acquire() as conn: cursor = conn.cursor(); cursor.execute("SELECT defined_daily_dose FROM clinical_atc WHERE atc_code = ?", (drug_atc,)); orig_ddd = cursor.fetchone()`. Then query an alternative: `cursor.execute("SELECT atc_code, substance_name, defined_daily_dose FROM clinical_atc WHERE level3_pharmacological = (SELECT level3_pharmacological FROM clinical_atc WHERE atc_code = ?) AND atc_code != ? LIMIT 1", (drug_atc, drug_atc))`. Calculate `alternative_dose = original_dose * (alternative_ddd / original_ddd)`. Append `TherapeuticAlternative(original_atc=drug_atc, suggested_atc=alt_atc, suggested_inn_name=alt_name, hierarchy_distance=1, cost_index=1.0, clinical_rationale=f"Equiefficacious dose: {alternative_dose} mg")` to the list. I'll add this list to the `DrugSafetyBlock` return call.
+9. **ROA-33: Remove Mock Coded in Frontend AppShell**
+   - In `medclient/frontend-react/src/base/useMedClientStore.ts` line 259, remove the `drugCatalog` mock dictionary and update `prescribedDrugs` to use `prescribed_atc_codes: activeMedications`.
+   - In `medclient/frontend-react/src/base/useMedClientStore.ts` line 313, remove the hardcoded `item_data` mock inside `submitExamEvaluation` and update to request dynamic item data using `sidecarIpcClient.evaluateExam`. Verify with `read_file`.
+10. **ROA-34: Stateful DAG Parameters Zero Division Prevention**
+    - Add `@model_validator(mode="after")` to `StatefulDAGDefinition` in `medclient/sidecar-python/src/base/educational_models.py` to enforce `critical_time_min >= optimal_time_min + 1.0` and `max_budget_eur >= optimal_cost_eur + 1.0`.
+    - In `medclient/sidecar-python/src/implementations/stateful_dag.py`, ensure the score calculation for `E_T` and `S_R` prevents division by zero. Add logic for `efficiency_time_score` = `math.exp(-max(0.0, (self._elapsed_time_min - self._scenario_definition.optimal_time_min) / max(1e-9, self._scenario_definition.critical_time_min - self._scenario_definition.optimal_time_min)))` and `stewardship_resource_score` = `max(0.0, 1.0 - (self._accumulated_cost_eur - self._scenario_definition.optimal_cost_eur) / max(1e-9, self._scenario_definition.max_budget_eur - self._scenario_definition.optimal_cost_eur))`. Add these calculations into the output dictionary returned by the `transition` method (around line 72, which I have successfully read via sed in the latest trace). Verify with `read_file`.
+11. **Run all tests**
+    - Execute all relevant test suites (e.g., `pytest`, `cargo test`, `vitest`). Use `read_file` to verify edits.
+12. **Pre commit instructions**
+    - Complete pre-commit steps to ensure proper testing, verification, review, and reflection are done.
+13. **Submit the change**
+    - Once all tests pass, I will submit the change with a descriptive commit message.

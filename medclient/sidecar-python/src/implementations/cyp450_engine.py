@@ -146,7 +146,8 @@ class CYP450Engine(ICYP450Engine):
 
             # Check if this is monotherapy and the drug inhibits/induces itself
             # We skip auto-inhibition and auto-induction for monotherapy
-            if len(expanded_drugs) == 1 and expanded_drugs[0].get("atc_code", "").strip().upper() == atc:
+            if len(prescribed_drugs) == 1 and all(e.get("atc_code", "").strip().upper() == atc for e in expanded_drugs):
+            if len(expanded_drugs) == 1:
                 total_inh, total_ind = 0.0, 0.0
                 primary_inh, primary_ind = [], []
 
