@@ -162,6 +162,9 @@ def execute_agent_action(
 
         elif action_type == "EVALUATE_QTC":
             from ..implementations.qtc_calculator import QTcCalculator
+            calc = QTcCalculator()
+
+            qtc_calculation_outcome = calc.evaluate_qtc(
             qtc_calc = QTcCalculator()
             qtc_calculation_outcome = qtc_calc.evaluate_qtc(
                 prescribed_drugs=action_parameter_map.get("prescribed_drugs", []),

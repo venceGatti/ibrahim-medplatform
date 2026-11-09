@@ -126,7 +126,7 @@ class FSRSScheduler(IFSRSScheduler):
 
         fuzz_factor = 0.05 if interval < 7.0 else (0.10 if interval < 30.0 else 0.15)
         # Scaled deterministic dispersion
-        fuzzed = interval * (1.0 + fuzz_factor * (float(hash_val) / 1000.0))
+        fuzzed = interval * (1.0 + fuzz_factor * (float(hash_val - 500) / 500.0))
 
         if target_exam_delta is not None and fuzzed > target_exam_delta:
             return max(1.0, target_exam_delta)
