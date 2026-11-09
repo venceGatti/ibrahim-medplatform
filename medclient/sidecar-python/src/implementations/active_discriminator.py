@@ -11,6 +11,7 @@ class ActiveDiscriminator(IActiveDiscriminator):
     def __init__(self, probability_gap_threshold: float = 0.15) -> None:
         self.gap_threshold = probability_gap_threshold
 
+    # type: ignore
     def select_next_best_question(
         self,
         candidate_a: str,

@@ -54,7 +54,7 @@ class ReverseWatchdog(IReverseWatchdog):
 
         SYNCHRONIZE = 0x00100000
         WAIT_OBJECT_0 = 0x00000000
-        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32 = ctypes.windll.kernel32  # type: ignore
 
         kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
         kernel32.OpenProcess.restype = wintypes.HANDLE
