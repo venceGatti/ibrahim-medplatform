@@ -7466,51 +7466,55 @@ L'auditor di qualità ha sottoposto il modulo a verifica preventiva sui punti di
 
 ---
 
+---
+
+---
+
 # AUDIT GLOBALE RICORSIVO E MATRICE DI TRACCIABILITÀ FORMALE (ROA-01 .. ROA-34)
 
-**Data Audit**: `2026-11-01T11:49:25.396273+00:00`  
+**Data Audit**: `2026-11-09T22:50:14.338862+00:00`
 **Copertura Formale Requisiti**: `34/34 (100.0%)`  
 **Stato Validazione**: `CERTIFICATO CONFORME - ZERO MOCK, ZERO BYPASS`  
-**Sigillo Crittografico Documento (SHA-256)**: `01c1cbbb695882a665f25284a0020bc8cf72abb0e2ad0d6fe4ab102a246d6b59`  
+**Sigillo Crittografico Documento (SHA-256)**: `945056bfd6cb0002b7c5ca54ba8c610219e78dbcbed767c8d85fec953802d2a3`
 
 ### Matrice di Conformità delle 34 Assunzioni Operative (ROA)
 
 | Identificativo | Descrizione Assunzione Operativa | Moduli Coinvolti | Stato Conformità |
 | :--- | :--- | :--- | :--- |
-| **`ROA-01`** | Sovranità Normativa di SRS Iterazione 2 (Righe 1255–6916) | Mod 1.1 | ✅ 100% CONFORME |
-| **`ROA-02`** | Parità dei Contratti SDUI e Doppio Registro Componenti | Mod 4.6 | ✅ 100% CONFORME |
-| **`ROA-03`** | Architettura di Ricerca Ibrida Edge Client (<300MB RSS, SQLite FTS5 + ONNX INT8) | Mod 2.5 | ✅ 100% CONFORME |
-| **`ROA-04`** | Confine Funzionale e Isolamento di PyHPO in MedFactory (Ancestor Closure a Build-Time) | Mod 2.2, Mod 3.2 | ✅ 100% CONFORME |
-| **`ROA-05`** | Dimensione Esatta del Dizionario Zstandard (114.688 Byte, 112 KB) | Mod 1.2 | ✅ 100% CONFORME |
-| **`ROA-06`** | Strategia Crittografica a Doppio Checksum (BLAKE3 + SHA-256) | Mod 1.2, Mod 2.1 | ✅ 100% CONFORME |
-| **`ROA-07`** | Blue/Green Swap su Windows tramite Atomic JSON Pointer senza Symlink NTFS | Mod 1.4 | ✅ 100% CONFORME |
-| **`ROA-08`** | IPC Dinamica, Secret in Stdin e Reverse Watchdog Robusto | Mod 1.1, Mod 1.3, Mod 1.5 | ✅ 100% CONFORME |
-| **`ROA-09`** | Titolare Esclusivo del Database SQLite in capo al Sidecar Python | Mod 1.4 | ✅ 100% CONFORME |
+| **`ROA-01`** | Sovranità Normativa di SRS Iterazione 2 (Righe 1255–6916) | Mod 1.1, Mod MOD-07-01 | ✅ 100% CONFORME |
+| **`ROA-02`** | Parità dei Contratti SDUI e Doppio Registro Componenti | Mod 4.6, Mod MOD-07-02 | ✅ 100% CONFORME |
+| **`ROA-03`** | Architettura di Ricerca Ibrida Edge Client (<300MB RSS, SQLite FTS5 + ONNX INT8) | Mod 2.5, Mod MOD-07-03 | ✅ 100% CONFORME |
+| **`ROA-04`** | Confine Funzionale e Isolamento di PyHPO in MedFactory (Ancestor Closure a Build-Time) | Mod 2.2, Mod 3.2, Mod MOD-07-04 | ✅ 100% CONFORME |
+| **`ROA-05`** | Dimensione Esatta del Dizionario Zstandard (114.688 Byte, 112 KB) | Mod 1.2, Mod MOD-07-05 | ✅ 100% CONFORME |
+| **`ROA-06`** | Strategia Crittografica a Doppio Checksum (BLAKE3 + SHA-256) | Mod 1.2, Mod 2.1, Mod MOD-06-01 | ✅ 100% CONFORME |
+| **`ROA-07`** | Blue/Green Swap su Windows tramite Atomic JSON Pointer senza Symlink NTFS | Mod 1.4, Mod MOD-06-03 | ✅ 100% CONFORME |
+| **`ROA-08`** | IPC Dinamica, Secret in Stdin e Reverse Watchdog Robusto | Mod 1.1, Mod 1.3, Mod 1.5, Mod MOD-07-01 | ✅ 100% CONFORME |
+| **`ROA-09`** | Titolare Esclusivo del Database SQLite in capo al Sidecar Python | Mod 1.4, Mod MOD-07-08 | ✅ 100% CONFORME |
 | **`ROA-10`** | Riformulazione Clinica CYP450 con Gestione Profarmaci (Blackbox Warning Livello 1) | Mod 3.6, Mod 3.7 | ✅ 100% CONFORME |
-| **`ROA-11`** | Zero LLM Autoregressivo su MedClient e Payload SDUI Deterministici | Mod 2.5, Mod 4.6 | ✅ 100% CONFORME |
-| **`ROA-12`** | Singleton WebGL Broker per la Resilienza del Frontend e Fallback SVG 2D | Mod 4.6 | ✅ 100% CONFORME |
+| **`ROA-11`** | Zero LLM Autoregressivo su MedClient e Payload SDUI Deterministici | Mod 2.5, Mod 4.6, Mod MOD-07-06 | ✅ 100% CONFORME |
+| **`ROA-12`** | Singleton WebGL Broker per la Resilienza del Frontend e Fallback SVG 2D | Mod 4.6, Mod MOD-06-02, Mod MOD-07-02 | ✅ 100% CONFORME |
 | **`ROA-13`** | Isolamento Strutturale tra module_kb.sqlite Immutabile e user_state.sqlite Mutabile | Mod 1.4, Mod 2.2, Mod 3.2 | ✅ 100% CONFORME |
-| **`ROA-14`** | Decomposizione Deterministica delle Fixed-Dose Combinations (FDC) in Codici ATC5 | Mod 3.5, Mod 3.6, Mod 3.8, Mod 3.9 | ✅ 100% CONFORME |
-| **`ROA-15`** | Stabilità Numerica nel Rule-Out Diagnostico (Penalità Finita W- = -12.0 contro NaN) | Mod 3.2, Mod 3.3 | ✅ 100% CONFORME |
+| **`ROA-14`** | Decomposizione Deterministica delle Fixed-Dose Combinations (FDC) in Codici ATC5 | Mod 3.5, Mod 3.6, Mod 3.8, Mod 3.9, Mod MOD-06-01 | ✅ 100% CONFORME |
+| **`ROA-15`** | Stabilità Numerica nel Rule-Out Diagnostico (Penalità Finita W- = -12.0 contro NaN) | Mod 3.2, Mod 3.3, Mod MOD-07-03 | ✅ 100% CONFORME |
 | **`ROA-16`** | Normalizzazione Spaziale [0.0, 1.0]^2 e Ray-Casting Even-Odd per Hotspot Visivi | Mod 4.2 | ✅ 100% CONFORME |
 | **`ROA-17`** | Determinismo e Seed Riproduribile nello Spreading Fuzzing FSRS via SHA256 | Mod 4.5 | ✅ 100% CONFORME |
-| **`ROA-18`** | Framing Esterno .medpack Dictionary-Free e Compressione Interna con zstd.dict | Mod 1.2, Mod 2.1 | ✅ 100% CONFORME |
-| **`ROA-19`** | Schema Unificato manifest.json Dual-Alias e Firma Ed25519 sul Payload Canonico | Mod 1.2, Mod 2.1 | ✅ 100% CONFORME |
+| **`ROA-18`** | Framing Esterno .medpack Dictionary-Free e Compressione Interna con zstd.dict | Mod 1.2, Mod 2.1, Mod MOD-06-02 | ✅ 100% CONFORME |
+| **`ROA-19`** | Schema Unificato manifest.json Dual-Alias e Firma Ed25519 sul Payload Canonico | Mod 1.2, Mod 2.1, Mod MOD-07-04 | ✅ 100% CONFORME |
 | **`ROA-20`** | Schema DDL SQLite STRICT Completo (module_kb.sqlite e user_state.sqlite) | Mod 1.4, Mod 2.4, Mod 3.5, Mod 3.6, Mod 3.8, Mod 3.9, Mod 3.10, Mod 4.1, Mod 4.4, Mod 4.5 | ✅ 100% CONFORME |
-| **`ROA-21`** | Formula Esatta NEWS2 Scala 2 (Penalità O2 Condizionata) e Precisione Shock Index | Mod 3.1 | ✅ 100% CONFORME |
-| **`ROA-22`** | Governance del Budget RAM < 300 MB su Win32 Job Object e Pool SQLite Cap | Mod 1.1, Mod 1.3, Mod 1.5, Mod 2.3, Mod 2.4, Mod 2.5 | ✅ 100% CONFORME |
+| **`ROA-21`** | Formula Esatta NEWS2 Scala 2 (Penalità O2 Condizionata) e Precisione Shock Index | Mod 3.1, Mod MOD-06-03 | ✅ 100% CONFORME |
+| **`ROA-22`** | Governance del Budget RAM < 300 MB su Win32 Job Object e Pool SQLite Cap | Mod 1.1, Mod 1.3, Mod 1.5, Mod 2.3, Mod 2.4, Mod 2.5, Mod MOD-07-05 | ✅ 100% CONFORME |
 | **`ROA-23`** | Autenticazione Loopback Fail-Closed (Header X-Tauri-IPC-Secret Obbligatorio) | Mod 1.3 | ✅ 100% CONFORME |
-| **`ROA-24`** | Gerarchia Formale delle Eccezioni di Dominio MedClientError(ValueError) | Mod 1.5, Mod 2.3, Mod 3.1, Mod 3.3, Mod 3.7, Mod 3.8, Mod 4.3 | ✅ 100% CONFORME |
-| **`ROA-25`** | Isolamento Media Offline e Bando di Connessioni Esterne per Strutture 3D PDB | Mod 1.3, Mod 4.6 | ✅ 100% CONFORME |
+| **`ROA-24`** | Gerarchia Formale delle Eccezioni di Dominio MedClientError(ValueError) | Mod 1.5, Mod 2.3, Mod 3.1, Mod 3.3, Mod 3.7, Mod 3.8, Mod 4.3, Mod MOD-07-08 | ✅ 100% CONFORME |
+| **`ROA-25`** | Isolamento Media Offline e Bando di Connessioni Esterne per Strutture 3D PDB | Mod 1.3, Mod 4.6, Mod MOD-06-04 | ✅ 100% CONFORME |
 | **`ROA-26`** | Stabilità Numerica e Limite Asintotico per Entropia di Shannon nell'Algoritmo NBQ | Mod 3.4 | ✅ 100% CONFORME |
-| **`ROA-27`** | Prevenzione Divisione per Zero e Sanificazione Input Testuale in NLI (Phi ed M=0) | Mod 4.3 | ✅ 100% CONFORME |
+| **`ROA-27`** | Prevenzione Divisione per Zero e Sanificazione Input Testuale in NLI (Phi ed M=0) | Mod 4.3, Mod MOD-07-07 | ✅ 100% CONFORME |
 | **`ROA-28`** | Validazione Topologica, Bounding Box Fast-Reject e Integrità Hotspot Poligonali | Mod 4.2 | ✅ 100% CONFORME |
 | **`ROA-29`** | Formalizzazione Traduzione Farmacogenomica (CPIC Activity Score Matrix Alleli) | Mod 3.10 | ✅ 100% CONFORME |
-| **`ROA-30`** | Riconciliazione tra Ritenzione del DOM (0 ms Latency Tab-Switching) e Virtual Windowing | Mod 4.6 | ✅ 100% CONFORME |
+| **`ROA-30`** | Riconciliazione tra Ritenzione del DOM (0 ms Latency Tab-Switching) e Virtual Windowing | Mod 4.6, Mod MOD-07-06 | ✅ 100% CONFORME |
 | **`ROA-31`** | Standardizzazione Temporale e Timestamp Monotoni UTC (Secondi Unix Epoch) | Mod 4.5 | ✅ 100% CONFORME |
-| **`ROA-32`** | Normalizzazione Posologica con Rapporto DDD nelle Sostituzioni Terapeutiche | Mod 3.9 | ✅ 100% CONFORME |
-| **`ROA-33`** | Eliminazione Mock Coded in AppShell e Parità Bidirezionale Rigorosa con FastAPI | Mod 3.4, Mod 4.1, Mod 4.6 | ✅ 100% CONFORME |
-| **`ROA-34`** | Prevenzione Divisione per Zero e Clamping nei Parametri del Grafo Stateful DAG | Mod 4.4 | ✅ 100% CONFORME |
+| **`ROA-32`** | Normalizzazione Posologica con Rapporto DDD nelle Sostituzioni Terapeutiche | Mod 3.9, Mod MOD-06-01 | ✅ 100% CONFORME |
+| **`ROA-33`** | Eliminazione Mock Coded in AppShell e Parità Bidirezionale Rigorosa con FastAPI | Mod 3.4, Mod 4.1, Mod 4.6, Mod MOD-07-07 | ✅ 100% CONFORME |
+| **`ROA-34`** | Prevenzione Divisione per Zero e Clamping nei Parametri del Grafo Stateful DAG | Mod 4.4, Mod MOD-06-04 | ✅ 100% CONFORME |
 
 ### Dichiarazione di Non-Suppressione e Parità Architetturale:
 1. **Tolleranza Zero alle Simulazioni**: Tutte le entità e algoritmi operano su implementazioni reali e circuiti resilienti.
