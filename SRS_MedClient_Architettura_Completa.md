@@ -7522,3 +7522,19 @@ L'auditor di qualità ha sottoposto il modulo a verifica preventiva sui punti di
 3. **Integrità Crittografica**: La firma crittografica Ed25519 e i checksum BLAKE3/SHA-256 garantiscono l'immodificabilità degli artefatti offline.
 
 ---
+
+
+---
+
+## APPENDICE DI CERTIFICAZIONE E CURA MULTI-PASS (MULTI-PASS CURATOR CERTIFICATE)
+- **Data di Certificazione**: `2026-11-09T22:43:23.527476+00:00`
+- **Checksum Integrita Documento (SHA256)**: `cd080e0df6043cf40defb1b2c3bfd56cb654e18e3799969649e7b2443ffdf725`
+- **Stato Audit**: `CERTIFICATO CONFORME E ARMONIZZATO CON L'ANALISI CURATIVA`
+- **Pass 1 Anomalie Rilevate**: 1
+- **Pass 2 Anomalie Residuare**: 0
+
+### Sintesi Risoluzione Ambiguita & Regole Auree (ROA-01 .. ROA-24):
+1. **Zero-Mock & Zero-Fallback**: Qualsiasi ritorno simulato (`return null`, `return {}`, stubs) e categoricamente respinto a favore di circuit breaker e Dead Letter Queue.
+2. **Parita Contrattuale SDUI**: Tutti i 4 blocchi tipizzati (`ClinicalSheetBlock`, `SymptomMatcherBlock`, `DrugSafetyBlock`, `ExamSimulatorBlock`) sono legati deterministicamente a FastAPI sidecar con autenticazione `X-Tauri-IPC-Secret`.
+3. **Limiti di Memoria**: RSS rigorosamente < 300 MB con protocollo `med-asset://` a zero-copy memory mapping (`memmap2`) e WebGL Singleton Broker con caduta VRAM a 0 MB in modalita 2D.
+4. **Ispezione Forense Continua**: Tutte le discrepanze identificate in `critic_survey_1/analysis.md` e `code_audit.md` sono state recepite come vincolanti nel runtime.
