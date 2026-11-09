@@ -21,7 +21,8 @@ export type CalloutSeverity =
   | 'CLINICAL_PEARL'
   | 'INFO'
   | 'WARNING'
-  | 'CRITICAL';
+  | 'CRITICAL'
+  | 'EXAM_TIP';
 
 export interface ClinicalCallout {
   readonly severity: CalloutSeverity;
