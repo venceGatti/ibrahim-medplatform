@@ -90,18 +90,6 @@ class StatefulDAGDefinition(BaseModel):
     max_budget_eur: float = Field(gt=0.0)
     optimal_cost_eur: float = Field(gt=0.0)
 
-    @model_validator(mode="after")
-    def validate_budget_and_time(self) -> "StatefulDAGDefinition":
-        if self.critical_time_min <= self.optimal_time_min:
-            raise ValueError(
-                f"critical_time_min ({self.critical_time_min}) must be strictly greater than optimal_time_min ({self.optimal_time_min})"
-            )
-        if self.max_budget_eur <= self.optimal_cost_eur:
-            raise ValueError(
-                f"max_budget_eur ({self.max_budget_eur}) must be strictly greater than optimal_cost_eur ({self.optimal_cost_eur})"
-            )
-        return self
-
 
 StatefulDAGPayload = StatefulDAGDefinition
 
