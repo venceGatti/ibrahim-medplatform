@@ -34,8 +34,19 @@ if __name__ == "__main__":
     parser.add_argument("--list", action="store_true", help="Elenca tutti i moduli")
     parser.add_argument("--sources", action="store_true", help="Elenca il registro fonti")
     parser.add_argument("--coverage", action="store_true", help="Matrice di copertura")
+    parser.add_argument("--curriculum", action="store_true", help="Elenca moduli e obiettivi del curriculum clinico LM-41")
 
     args = parser.parse_args()
+
+    if args.curriculum:
+        print("[SRS-CATALOG] Moduli del Curriculum e Docimologia Medica LM-41 (Area 6):")
+        curriculum_modules = [m for m in ALL_SRS_MODULES if m.area_name == "Curriculum_Docimology"]
+        for mod in curriculum_modules:
+            print(f"  - [{mod.module_code}] {mod.titolo_capitolo}")
+            print(f"      Fonti: {', '.join(mod.data_sources) if mod.data_sources else 'N/A'}")
+            print(f"      Target: {', '.join(mod.target_paths)}")
+            print(f"      Remediates: {', '.join(mod.remediates)}")
+        sys.exit(0)
 
     if args.list:
         print(f"[SRS-CATALOG] Totale macro-moduli registrati nel catalogo: {len(ALL_SRS_MODULES)}")
