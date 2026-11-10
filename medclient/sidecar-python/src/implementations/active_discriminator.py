@@ -93,7 +93,7 @@ class ActiveDiscriminator(IActiveDiscriminator):
         return nbq.model_dump()
 
     def _binary_entropy(self, p: float) -> float:
-        """Compute binary Shannon entropy H(p)."""
-        if p <= 0.0 or p >= 1.0:
+        """Compute binary Shannon entropy H(p) with asymptotic epsilon guards (ROA-26)."""
+        if p <= 1e-12 or p >= 1.0 - 1e-12:
             return 0.0
         return -(p * math.log2(p) + (1.0 - p) * math.log2(1.0 - p))

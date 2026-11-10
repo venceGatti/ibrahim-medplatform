@@ -1,3 +1,6 @@
+import os
+import sys
+import json
 """Shared test fixtures, cryptographic helpers, and clinical contracts for MedPlatform."""
 import os
 import sys
@@ -6,6 +9,14 @@ import hashlib
 import sqlite3
 import tempfile
 from pathlib import Path
+from typing import List, Tuple
+from datetime import datetime, timezone
+import blake3
+from cryptography.hazmat.primitives.asymmetric import ed25519
+import numpy as np
+import pytest
+
+# Core Project Root
 from typing import List, Tuple, Dict, Any, Union, Optional
 
 import pytest
@@ -119,9 +130,9 @@ def real_sqlite_kb():
     fd, path = tempfile.mkstemp(suffix=".sqlite")
     conn = sqlite3.connect(path)
     cursor = conn.cursor()
-    cursor.execute('''
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS clinical_icd10 (
-            icd10_code TEXT,
+            icd10_code TEXT PRIMARY KEY,
             description TEXT
 """
 Pytest configuration, authoritative reference algorithms, and shared test fixtures
@@ -379,18 +390,18 @@ def real_sqlite_kb(tmp_path_factory):
             atc_code=atc_code,
             is_prodrug=is_pro,
         )
-    ''')
-    cursor.executemany('''
+    """)
+    cursor.executemany("""
         INSERT INTO clinical_icd10 (icd10_code, description) VALUES (?, ?)
-    ''', [
+    """, [
         ("I21.0", "Acute transmural myocardial infarction of anterior wall"),
         ("I20.0", "Unstable angina"),
         ("I30.0", "Acute nonspecific idiopathic pericarditis"),
         ("J18.9", "Pneumonia, unspecified organism"),
     ])
-    cursor.executemany('''
+    cursor.executemany("""
         INSERT INTO polypharmacy_ddi (atc_a, atc_b, description, severity) VALUES (?, ?, ?, ?)
-    ''', [
+    """, [
         ("B01AC04", "A02BC01", "Clopidogrel and Omeprazole interaction", "WARNING"),
     ])
     conn.commit()
