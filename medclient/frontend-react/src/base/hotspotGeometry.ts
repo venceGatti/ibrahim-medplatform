@@ -98,36 +98,12 @@ export function evaluateHotspotHitWithTolerance(
     return degeneratePolygon;
   }
 
-  // Shoelace formula area check (ROA-28)
-  let shoelaceArea = 0;
-  const n = polygonVertices.length;
-  for (let i = 0; i < n; i += 1) {
-    const j = (i + 1) % n;
-    shoelaceArea += polygonVertices[i][0] * polygonVertices[j][1];
-    shoelaceArea -= polygonVertices[j][0] * polygonVertices[i][1];
-  }
-  shoelaceArea = 0.5 * Math.abs(shoelaceArea);
-  if (shoelaceArea < 1e-6) {
-    return false;
-  }
-
-  const boundedTolerance = Math.max(0.0, Math.min(DEFAULT_HOTSPOT_TOLERANCE_RADIUS, toleranceRadius));
-
-  // AABB bounding box pre-filter with tolerance
-  const minU = Math.min(...polygonVertices.map((v) => v[0])) - boundedTolerance;
-  const maxU = Math.max(...polygonVertices.map((v) => v[0])) + boundedTolerance;
-  const minV = Math.min(...polygonVertices.map((v) => v[1])) - boundedTolerance;
-  const maxV = Math.max(...polygonVertices.map((v) => v[1])) + boundedTolerance;
-
-  if (pointU < minU || pointU > maxU || pointV < minV || pointV > maxV) {
-    return false;
-  }
-
   const directHit = evaluatePointInPolygonEvenOdd(pointU, pointV, polygonVertices);
   if (directHit) {
     return directHit;
   }
 
+  const boundedTolerance = Math.max(0.0, Math.min(DEFAULT_HOTSPOT_TOLERANCE_RADIUS, toleranceRadius));
   for (let idx = 0; idx < polygonVertices.length; idx += 1) {
     const startVertex = polygonVertices[idx];
     const endVertex = polygonVertices[(idx + 1) % polygonVertices.length];
