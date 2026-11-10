@@ -171,8 +171,8 @@ class MedPackAssembler(IMedPackAssembler):
             module_kb_sqlite=blake3_map.get("module_kb.sqlite") or blake3_map.get("database/module_kb.sqlite") or "0" * 64,
             zstd_dict=blake3_map.get("zstd.dict", "0" * 64),
             vector_index_bin=blake3_map.get("vector_index/index.bin"),
-            vector_index_meta=blake3_map.get("vector_index/meta.bin"),
-            media_manifest_cbor=blake3_map.get("media/media_manifest.cbor") or blake3_map.get("assets_media/media_manifest.cbor")
+            vector_meta_bin=blake3_map.get("vector_index/meta.bin"),
+            assets_media_manifest=blake3_map.get("media/media_manifest.cbor") or blake3_map.get("assets_media/media_manifest.cbor")
         )
 
         transitional_tar_path = staging_dir / "transitional_archive.tar"

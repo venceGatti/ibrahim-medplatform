@@ -41,6 +41,8 @@ class FSRSScheduler(IFSRSScheduler):
     def __init__(self, weights: Optional[List[float]] = None) -> None:
         self.w = weights if weights is not None else DEFAULT_FSRS_WEIGHTS
 
+    # type: ignore
+    def step(self, review_input: Any, card_state: Optional[Dict[str, Any]] = None) -> ReviewResultDict:
     def step(self, review_input: Any, card_state: Optional[Dict[str, Any]] = None) -> Any:
         """Compatibility adapter executing review_card from an FSRSReviewInput model or dict."""
         if hasattr(review_input, "rating"):
@@ -78,6 +80,8 @@ class FSRSScheduler(IFSRSScheduler):
             target_exam_date=target_exam_val,
         )
 
+    # type: ignore
+    def step(self, review_input: FSRSReviewInput) -> ReviewResultDict:
     def process_step(self, review_input: FSRSReviewInput) -> Any:
         """Compatibility adapter executing review_card from an FSRSReviewInput model."""
         card_instance = FSRSCardBase(
@@ -126,7 +130,7 @@ class FSRSScheduler(IFSRSScheduler):
 
         fuzz_factor = 0.05 if interval < 7.0 else (0.10 if interval < 30.0 else 0.15)
         # Scaled deterministic dispersion
-        fuzzed = interval * (1.0 + fuzz_factor * (float(hash_val) / 1000.0))
+        fuzzed = interval * (1.0 + fuzz_factor * (float(hash_val - 500) / 500.0))
 
         if target_exam_delta is not None and fuzzed > target_exam_delta:
             return max(1.0, target_exam_delta)
