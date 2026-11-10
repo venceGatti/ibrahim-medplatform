@@ -41,6 +41,7 @@ class FSRSScheduler(IFSRSScheduler):
     def __init__(self, weights: Optional[List[float]] = None) -> None:
         self.w = weights if weights is not None else DEFAULT_FSRS_WEIGHTS
 
+    # type: ignore
     def step(self, review_input: Any, card_state: Optional[Dict[str, Any]] = None) -> Any:
         """Compatibility adapter executing review_card from an FSRSReviewInput model or dict."""
         if hasattr(review_input, "rating"):

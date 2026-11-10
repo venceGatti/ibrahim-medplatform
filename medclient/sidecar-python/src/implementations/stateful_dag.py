@@ -1,4 +1,5 @@
 """Feature 38: Stateful DAG Clinical Scenario Stepper Engine."""
+import math
 from typing import Dict, Any, List, Optional
 from ..interfaces.educational import IStatefulDAGScenario
 from ..base.educational_models import (
@@ -71,6 +72,13 @@ class StatefulDAGScenarioEngine(IStatefulDAGScenario):
         is_terminal = dest_node.is_terminal
         terminal_grade = dest_node.terminal_grade
 
+        # Efficiency and Stewardship scores (ROA-34)
+        time_denom = max(1e-9, self._scenario_definition.critical_time_min - self._scenario_definition.optimal_time_min)
+        efficiency_time_score = math.exp(-max(0.0, (self._elapsed_time_min - self._scenario_definition.optimal_time_min) / time_denom))
+
+        cost_denom = max(1e-9, self._scenario_definition.max_budget_eur - self._scenario_definition.optimal_cost_eur)
+        stewardship_resource_score = max(0.0, 1.0 - (self._accumulated_cost_eur - self._scenario_definition.optimal_cost_eur) / cost_denom)
+
         return {
             "previous_node_id": current_node_id,
             "next_node_id": dest_node.node_id,
@@ -82,6 +90,8 @@ class StatefulDAGScenarioEngine(IStatefulDAGScenario):
             "accumulated_cost_eur": self._accumulated_cost_eur,
             "total_cost_eur": self._accumulated_cost_eur,
             "accumulated_risk": round(self._accumulated_risk, 3),
+            "efficiency_time_score": round(efficiency_time_score, 4),
+            "stewardship_resource_score": round(stewardship_resource_score, 4),
             "is_terminal": is_terminal,
             "terminal_grade": terminal_grade,
             "final_score": terminal_grade,

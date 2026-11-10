@@ -160,8 +160,8 @@ async def run_pipeline(
         with open(output_path, "w", encoding="utf-8", newline="\n") as file_trim:
             file_trim.write(current_content)
 
+    existing_module_codes = inspect_existing_modules(output_path)
     if not audit_only:
-        existing_module_codes = inspect_existing_modules(output_path)
         print(f"[SRS-PIPELINE] Moduli già archiviati nel documento: {len(existing_module_codes)}")
 
         findings = []

@@ -149,9 +149,6 @@ class CYP450Engine(ICYP450Engine):
             if len(prescribed_drugs) == 1 and all(e.get("atc_code", "").strip().upper() == atc for e in expanded_drugs):
                 total_inh, total_ind = 0.0, 0.0
                 primary_inh, primary_ind = [], []
-            elif len(expanded_drugs) == 1:
-                total_inh, total_ind = 0.0, 0.0
-                primary_inh, primary_ind = [], []
 
             ce_val = max(0.05, 1.0 - total_inh + total_ind)
             cyp_states[iso_key] = CYPFunctionalState(

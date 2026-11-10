@@ -1,3 +1,13 @@
+"""E2E Test Runner entrypoint conforming to CI and validation suites."""
+import os
+import sys
+"""Master E2E suite execution wrapper conforming to test runner interface."""
+import os
+import sys
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 """E2E Test Suite Runner entrypoint."""
 import sys
 from pathlib import Path
