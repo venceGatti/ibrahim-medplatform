@@ -20,6 +20,8 @@ class SQLiteModuleBuilder(SQLiteDomainInserterMixin, ISQLiteBuilder):
         self._is_closed = False
         if self.staging_database_path.exists():
             self.staging_database_path.unlink()
+        else:
+            self.staging_database_path.parent.mkdir(parents=True, exist_ok=True)
 
         self.conn = sqlite3.connect(str(self.staging_database_path))
         try:
