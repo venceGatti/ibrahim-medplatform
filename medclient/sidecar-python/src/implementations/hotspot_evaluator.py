@@ -79,6 +79,25 @@ class HotspotEvaluator:
         if len(polygon_vertices) < 3:
             return False
 
+        # Shoelace formula check for non-zero area (ROA-28)
+        shoelace_area = 0.0
+        n_verts = len(polygon_vertices)
+        for i in range(n_verts):
+            j = (i + 1) % n_verts
+            shoelace_area += polygon_vertices[i][0] * polygon_vertices[j][1]
+            shoelace_area -= polygon_vertices[j][0] * polygon_vertices[i][1]
+        shoelace_area = 0.5 * abs(shoelace_area)
+        if shoelace_area < 1e-6:
+            return False
+
+        # AABB bounding box pre-check with tolerance
+        min_u = min(v[0] for v in polygon_vertices) - self.tolerance_radius
+        max_u = max(v[0] for v in polygon_vertices) + self.tolerance_radius
+        min_v = min(v[1] for v in polygon_vertices) - self.tolerance_radius
+        max_v = max(v[1] for v in polygon_vertices) + self.tolerance_radius
+        if point_u < min_u or point_u > max_u or point_v < min_v or point_v > max_v:
+            return False
+
         if point_in_polygon_even_odd(point_u, point_v, polygon_vertices):
             return True
 

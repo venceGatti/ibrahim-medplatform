@@ -14,15 +14,15 @@ class CKDEPI2021Calculator(IRenalCalculator):
     ) -> float:
         """Calculate eGFR without race modifier in mL/min/1.73m^2."""
         if serum_creatinine_mg_dl <= 0.0:
-            raise ValueError(
+            raise InvalidRenalParameterError(
                 f"Serum creatinine must be strictly positive, got {serum_creatinine_mg_dl}"
             )
         if age <= 0:
-            raise ValueError(
+            raise InvalidRenalParameterError(
                 f"Patient age must be strictly positive, got {age}"
             )
         if age < 18:
-            raise ValueError(
+            raise InvalidRenalParameterError(
                 f"CKD-EPI 2021 equation requires strictly positive adult age >= 18, got {age}"
             )
 
