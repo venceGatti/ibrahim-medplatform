@@ -142,6 +142,18 @@ class NLICrossEncoderEvaluator(INLICrossEncoder):
         sentences = self._split_sentences(student_text)
         sentence_count = len(sentences)
 
+        if sentence_count == 0:
+            return {
+                "final_score": 0.0,
+                "overall_score": 0.0,
+                "passed": False,
+                "failed_critical_concepts": [],
+                "critical_contradiction_triggered": False,
+                "precision_factor": 0.0,
+                "contradiction_penalty": 1.0,
+                "concept_evaluations": [],
+            }
+
         if isinstance(atomic_concepts, dict) and "atomic_concepts" in atomic_concepts:
             raw_list = atomic_concepts["atomic_concepts"]
         elif isinstance(atomic_concepts, list):
@@ -185,7 +197,7 @@ class NLICrossEncoderEvaluator(INLICrossEncoder):
             1 for s in sentences
             if max((self._infer_nli_pair(s, ac.hypothesis)[0] for ac in concepts), default=0.0) >= 0.70
         )
-        precision_factor = max(0.2, confirmed_sentence_count / max(1, sentence_count))
+        precision_factor = confirmed_sentence_count / max(1, sentence_count)
 
         psi = 1.0
         for cs in concept_scores:
