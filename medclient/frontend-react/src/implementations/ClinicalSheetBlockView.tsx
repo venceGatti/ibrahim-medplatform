@@ -1,7 +1,7 @@
 import React from 'react';
 import type { CalloutSeverity, ClinicalSheetBlock } from '../interfaces/sduiContracts';
 import { MolecularStructureViewer } from './MolecularStructureViewer';
-import { VirtualBlockWindow, renderInlineMarkdown } from './VirtualBlockWindow';
+import { VirtualBlockWindow } from './VirtualBlockWindow';
 
 export interface ClinicalSheetBlockViewProps {
   readonly block: ClinicalSheetBlock;
@@ -10,33 +10,39 @@ export interface ClinicalSheetBlockViewProps {
 }
 
 export function resolveCalloutThemeClasses(severity: CalloutSeverity): string {
-  if (severity === 'RED_FLAG' || severity === 'CRITICAL' || severity === 'CONTRAINDICATION') {
+  if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
     return 'border-rose-600 bg-rose-600/10 text-rose-100';
   }
-  if (severity === 'BLACKBOX' || severity === 'WARNING') {
+  if (severity === 'BLACKBOX') {
     return 'border-amber-500 bg-amber-500/10 text-amber-200';
   }
-  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
+  if (severity === 'WARNING') {
+    return 'border-amber-500 bg-amber-500/10 text-amber-200';
+  }
+  if (severity === 'CLINICAL_PEARL') {
     return 'border-sky-600 bg-sky-600/10 text-sky-100';
   }
   return 'border-blue-500 bg-blue-500/10 text-blue-100';
 }
 
 export function resolveCalloutBadgeClasses(severity: CalloutSeverity): string {
-  if (severity === 'RED_FLAG' || severity === 'CRITICAL' || severity === 'CONTRAINDICATION') {
+  if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
     return 'bg-rose-600 text-white';
   }
-  if (severity === 'BLACKBOX' || severity === 'WARNING') {
+  if (severity === 'BLACKBOX') {
     return 'bg-amber-500 text-slate-950 font-black';
   }
-  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
+  if (severity === 'CLINICAL_PEARL') {
     return 'bg-sky-600 text-white';
+  }
+  if (severity === 'WARNING') {
+    return 'bg-amber-500 text-slate-950 font-bold';
   }
   return 'bg-blue-600 text-white';
 }
 
 function renderCalloutIcon(severity: CalloutSeverity): React.ReactNode {
-  if (severity === 'RED_FLAG' || severity === 'CRITICAL' || severity === 'CONTRAINDICATION') {
+  if (severity === 'RED_FLAG' || severity === 'CRITICAL') {
     return (
       <svg
         className="h-5 w-5 shrink-0 text-rose-500"
@@ -72,7 +78,7 @@ function renderCalloutIcon(severity: CalloutSeverity): React.ReactNode {
       </svg>
     );
   }
-  if (severity === 'CLINICAL_PEARL' || severity === 'EXAM_TIP') {
+  if (severity === 'CLINICAL_PEARL') {
     return (
       <svg
         className="h-5 w-5 shrink-0 text-sky-400"
@@ -158,29 +164,7 @@ export const ClinicalSheetBlockView: React.FC<ClinicalSheetBlockViewProps> = ({
                   <h3 className="font-bold tracking-tight text-white">{calloutEntry.title}</h3>
                 )}
               </div>
-              {calloutEntry.body_markdown ? (
-                <div className="mt-2 text-xs leading-relaxed opacity-95 space-y-1">
-                  {calloutEntry.body_markdown.split(/\r?\n/).map((line, i) => (
-                    <p key={i}>{renderInlineMarkdown(line)}</p>
-                  ))}
-                </div>
-              ) : calloutEntry.message ? (
-                <p className="mt-2 text-xs leading-relaxed opacity-95">{calloutEntry.message}</p>
-              ) : null}
-
-              {(calloutEntry.icd10_refs?.length || calloutEntry.hpo_refs?.length || calloutEntry.atc_refs?.length) ? (
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {calloutEntry.icd10_refs?.map((ref, i) => (
-                    <span key={`icd10-${i}`} className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">ICD-10: {ref}</span>
-                  ))}
-                  {calloutEntry.hpo_refs?.map((ref, i) => (
-                    <span key={`hpo-${i}`} className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">HPO: {ref}</span>
-                  ))}
-                  {calloutEntry.atc_refs?.map((ref, i) => (
-                    <span key={`atc-${i}`} className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-mono text-slate-300">ATC: {ref}</span>
-                  ))}
-                </div>
-              ) : null}
+              <p className="mt-2 text-xs leading-relaxed opacity-95">{calloutEntry.message}</p>
             </div>
           ))}
         </div>

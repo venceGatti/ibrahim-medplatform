@@ -66,7 +66,7 @@ export interface VirtualBlockWindowProps {
   readonly onScrollOffsetChange?: (scrollTopPx: number) => void;
 }
 
-export const renderInlineMarkdown = (text: string): React.ReactNode[] => {
+const renderInlineMarkdown = (text: string): React.ReactNode[] => {
   const parts = text.split(/(\*\*.*?\*\*|\*.*?\*)/g);
   return parts.map((part, index) => {
     if (part.startsWith('**') && part.endsWith('**')) {
