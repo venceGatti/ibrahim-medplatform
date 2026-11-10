@@ -7,6 +7,39 @@ from ..base.pharmacology_models import PharmacogenomicMatch
 class CPICPharmacogenomicsEngine(IPharmacogenomicsEngine):
     """Evaluates actionable CPIC Level 1A guidelines against patient genotype."""
 
+    def _calculate_activity_score(self, diplotype: str) -> float:
+        """Calculate CPIC Activity Score (AS) for a given diplotype (e.g. *1/*4)."""
+        score = 0.0
+        alleles = diplotype.split("/")
+        for allele in alleles:
+            allele = allele.strip().upper()
+            if allele in ["*3", "*4", "*5", "*6", "*3A", "*3C"]:
+                score += 0.0
+            elif allele in ["*9", "*10", "*17", "*41"]:
+                score += 0.5
+            elif allele in ["*1", "*2"]:
+                score += 1.0
+            elif "XN" in allele or "X" in allele:
+                # E.g. *1xN or *2xN
+                base_allele = allele.split("X")[0]
+                if base_allele in ["*1", "*2"]:
+                    score += 2.0
+                elif base_allele in ["*9", "*10", "*17", "*41"]:
+                    score += 1.0
+        return score
+
+    def _get_phenotype_from_as(self, activity_score: float) -> str:
+        """Map Activity Score to CPIC Phenotype."""
+        if activity_score == 0.0:
+            return "PM"  # Poor Metabolizer
+        elif 0.0 < activity_score <= 1.0:
+            return "IM"  # Intermediate Metabolizer
+        elif 1.25 <= activity_score <= 2.25:
+            return "NM"  # Normal Metabolizer
+        elif activity_score > 2.25:
+            return "UM"  # Ultra-Rapid Metabolizer
+        return "NM"
+
     def evaluate_genetics(
         self,
         prescribed_drugs: List[Dict[str, Any]],
@@ -39,7 +72,10 @@ class CPICPharmacogenomicsEngine(IPharmacogenomicsEngine):
             # 2. CYP2C19 Poor Metabolizer + Clopidogrel (B01AC04)
             if atc == "B01AC04" or "CLOPIDOGREL" in inn.upper():
                 cyp2c19 = norm_geno.get("CYP2C19", "")
-                if "POOR" in cyp2c19 or any(d in cyp2c19 for d in ["*2/*2", "*2/*3", "*3/*3", "PM"]):
+                phenotype = ""
+                if "/" in cyp2c19:
+                    phenotype = self._get_phenotype_from_as(self._calculate_activity_score(cyp2c19))
+                if "POOR" in cyp2c19 or phenotype == "PM" or any(d in cyp2c19 for d in ["*2/*2", "*2/*3", "*3/*3", "PM"]):
                     matches.append(
                         PharmacogenomicMatch(
                             gene_symbol="CYP2C19",
@@ -73,7 +109,10 @@ class CPICPharmacogenomicsEngine(IPharmacogenomicsEngine):
             # 4. CYP2D6 Ultra-Rapid Metabolizer + Codeine (R05DA04)
             if atc == "R05DA04" or "CODEINE" in inn.upper():
                 cyp2d6 = norm_geno.get("CYP2D6", "")
-                if "ULTRA" in cyp2d6 or any(v in cyp2d6 for v in ["*1/*1XN", "*2/*2XN", "UM"]):
+                phenotype = ""
+                if "/" in cyp2d6:
+                    phenotype = self._get_phenotype_from_as(self._calculate_activity_score(cyp2d6))
+                if "ULTRA" in cyp2d6 or phenotype == "UM" or any(v in cyp2d6 for v in ["*1/*1XN", "*2/*2XN", "UM"]):
                     matches.append(
                         PharmacogenomicMatch(
                             gene_symbol="CYP2D6",
@@ -83,7 +122,7 @@ class CPICPharmacogenomicsEngine(IPharmacogenomicsEngine):
                             is_absolute_contraindication=True,
                         )
                     )
-                elif "POOR" in cyp2d6 or any(v in cyp2d6 for v in ["*4/*4", "*5/*5", "PM"]):
+                elif "POOR" in cyp2d6 or phenotype == "PM" or any(v in cyp2d6 for v in ["*4/*4", "*5/*5", "PM"]):
                     matches.append(
                         PharmacogenomicMatch(
                             gene_symbol="CYP2D6",
@@ -97,7 +136,10 @@ class CPICPharmacogenomicsEngine(IPharmacogenomicsEngine):
             # 5. CYP2D6 Poor Metabolizer + Tamoxifen (L02BA01)
             if atc == "L02BA01" or "TAMOXIFEN" in inn.upper():
                 cyp2d6 = norm_geno.get("CYP2D6", "")
-                if "POOR" in cyp2d6 or any(v in cyp2d6 for v in ["*4/*4", "*5/*5", "PM"]):
+                phenotype = ""
+                if "/" in cyp2d6:
+                    phenotype = self._get_phenotype_from_as(self._calculate_activity_score(cyp2d6))
+                if "POOR" in cyp2d6 or phenotype == "PM" or any(v in cyp2d6 for v in ["*4/*4", "*5/*5", "PM"]):
                     matches.append(
                         PharmacogenomicMatch(
                             gene_symbol="CYP2D6",

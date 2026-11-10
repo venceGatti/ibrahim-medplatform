@@ -75,6 +75,7 @@ class DrugSafetyBlock(BaseModel):
     qtc_tisdale_score: Optional[float] = None
     triple_whammy_detected: Optional[bool] = None
     fdc_decompositions: Optional[List[Dict[str, Any]]] = None
+    recommended_alternatives: Optional[List[Any]] = Field(default_factory=list)
 
 
 # 4. ExamSimulatorBlock (aliased to ClinicalExamBlock / InteractiveFlowchartBlock / AnatomicalHotspotBlock)

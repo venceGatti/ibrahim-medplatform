@@ -221,6 +221,7 @@ class FSRSScheduler(IFSRSScheduler):
             ),
         )
         due_date = now + timedelta(days=final_interval)
+        due_timestamp = int(due_date.timestamp())
 
         updated_card = FSRSCardBase(
             concept_uid=card.concept_uid,
@@ -233,6 +234,7 @@ class FSRSScheduler(IFSRSScheduler):
             state=new_state,
             last_review=now,
             due_date=due_date,
+            due_timestamp=due_timestamp,
             retrievability=1.0,
             criticality_weight=card.criticality_weight,
         )

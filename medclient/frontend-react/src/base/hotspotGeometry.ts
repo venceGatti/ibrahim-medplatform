@@ -47,10 +47,13 @@ export function evaluatePointInPolygonEvenOdd(
 
     const crossesHorizontalRay = vCurrent > pointV !== vPrevious > pointV;
     if (crossesHorizontalRay) {
-      const intersectionU =
-        ((uPrevious - uCurrent) * (pointV - vCurrent)) / (vPrevious - vCurrent) + uCurrent;
-      if (pointU < intersectionU) {
-        isInsidePolygon = !isInsidePolygon;
+      const denominator = vPrevious - vCurrent;
+      if (denominator !== 0) {
+        const intersectionU =
+          ((uPrevious - uCurrent) * (pointV - vCurrent)) / denominator + uCurrent;
+        if (pointU < intersectionU) {
+          isInsidePolygon = !isInsidePolygon;
+        }
       }
     }
     previousIndex = currentIndex;
@@ -96,6 +99,36 @@ export function evaluateHotspotHitWithTolerance(
   if (polygonVertices.length < 3) {
     const degeneratePolygon = false;
     return degeneratePolygon;
+  }
+
+  // Validate topological integrity (Shoelace area >= 1e-6)
+  let area = 0.0;
+  const n = polygonVertices.length;
+  for (let i = 0; i < n; i++) {
+    const [x_i, y_i] = polygonVertices[i];
+    const [x_next, y_next] = polygonVertices[(i + 1) % n];
+    if (Number.isNaN(x_i) || Number.isNaN(y_i) || Number.isNaN(x_next) || Number.isNaN(y_next)) {
+      return false;
+    }
+    if (!Number.isFinite(x_i) || !Number.isFinite(y_i) || !Number.isFinite(x_next) || !Number.isFinite(y_next)) {
+      return false;
+    }
+    area += x_i * y_next - x_next * y_i;
+  }
+  area = Math.abs(area) / 2.0;
+
+  if (area < 1e-6) {
+    return false;
+  }
+
+  // O(1) Axis-Aligned Bounding Box (AABB) Fast-Reject Pre-filter
+  const minU = Math.min(...polygonVertices.map(v => v[0])) - toleranceRadius;
+  const maxU = Math.max(...polygonVertices.map(v => v[0])) + toleranceRadius;
+  const minV = Math.min(...polygonVertices.map(v => v[1])) - toleranceRadius;
+  const maxV = Math.max(...polygonVertices.map(v => v[1])) + toleranceRadius;
+
+  if (pointU < minU || pointU > maxU || pointV < minV || pointV > maxV) {
+    return false;
   }
 
   const directHit = evaluatePointInPolygonEvenOdd(pointU, pointV, polygonVertices);

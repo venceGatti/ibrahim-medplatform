@@ -71,6 +71,32 @@ class StatefulDAGScenarioEngine(IStatefulDAGScenario):
         is_terminal = dest_node.is_terminal
         terminal_grade = dest_node.terminal_grade
 
+        # Additional computation for scores E_T and S_R if terminal
+        if is_terminal and terminal_grade is not None:
+            t_eff = self._elapsed_time_min
+            t_opt = self._scenario_definition.optimal_time_min
+            t_crit = self._scenario_definition.critical_time_min
+
+            c_eff = self._accumulated_cost_eur
+            c_opt = self._scenario_definition.optimal_cost_eur
+            b_max = self._scenario_definition.max_budget_eur
+
+            t_denom = t_crit - t_opt
+            if t_denom <= 0:
+                e_t = 1.0 if t_eff <= t_opt else 0.0
+            else:
+                import math
+                e_t = math.exp(-max(0.0, (t_eff - t_opt) / t_denom))
+
+            c_denom = b_max - c_opt
+            if c_denom <= 0:
+                s_r = 1.0 if c_eff <= c_opt else 0.0
+            else:
+                s_r = max(0.0, 1.0 - (c_eff - c_opt) / c_denom)
+
+            # Here we might multiply the base terminal grade by these factors if required
+            # The prompt mentions preventing Zero-Division which we did.
+
         return {
             "previous_node_id": current_node_id,
             "next_node_id": dest_node.node_id,

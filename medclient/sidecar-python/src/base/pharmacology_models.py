@@ -116,6 +116,8 @@ class TherapeuticAlternative(BaseModel):
     hierarchy_distance: int
     cost_index: float
     clinical_rationale: str
+    original_dose_mg: float = Field(..., gt=0.0, description="Dose prescritta originale in mg")
+    calculated_substitute_dose: Optional[float] = Field(default=None, description="Dose calcolata in sicurezza via rapporto DDD")
 
 
 class PharmacogenomicMatch(BaseModel):

@@ -128,6 +128,7 @@ class FSRSCardBase(BaseModel):
     state: FSRSStateEnum = Field(default=FSRSStateEnum.NEW)
     last_review: Optional[datetime] = None
     due_date: Optional[datetime] = None
+    due_timestamp: Optional[int] = None
     retrievability: float = Field(default=1.0, ge=0.0, le=1.0)
     criticality_weight: float = Field(default=1.0, ge=0.0, le=5.0)
 

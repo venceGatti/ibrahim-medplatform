@@ -48,9 +48,11 @@ def point_in_polygon_even_odd(
 
         crosses_ray = (curr_v > point_v) != (prev_v > point_v)
         if crosses_ray:
-            intersection_u = (prev_u - curr_u) * (point_v - curr_v) / (prev_v - curr_v) + curr_u
-            if point_u < intersection_u:
-                is_inside = not is_inside
+            denominator = prev_v - curr_v
+            if denominator != 0.0:
+                intersection_u = (prev_u - curr_u) * (point_v - curr_v) / denominator + curr_u
+                if point_u < intersection_u:
+                    is_inside = not is_inside
         previous_idx = current_idx
 
     return is_inside
@@ -77,6 +79,31 @@ class HotspotEvaluator:
                 return False
 
         if len(polygon_vertices) < 3:
+            return False
+
+        # Validate topological integrity (Shoelace area >= 1e-6)
+        area = 0.0
+        n = len(polygon_vertices)
+        for i in range(n):
+            x_i, y_i = polygon_vertices[i]
+            x_next, y_next = polygon_vertices[(i + 1) % n]
+            if math.isnan(x_i) or math.isnan(y_i) or math.isnan(x_next) or math.isnan(y_next):
+                return False
+            if math.isinf(x_i) or math.isinf(y_i) or math.isinf(x_next) or math.isinf(y_next):
+                return False
+            area += x_i * y_next - x_next * y_i
+        area = abs(area) / 2.0
+
+        if area < 1e-6:
+            return False
+
+        # O(1) Axis-Aligned Bounding Box (AABB) Fast-Reject Pre-filter
+        min_u = min(x for x, y in polygon_vertices) - self.tolerance_radius
+        max_u = max(x for x, y in polygon_vertices) + self.tolerance_radius
+        min_v = min(y for x, y in polygon_vertices) - self.tolerance_radius
+        max_v = max(y for x, y in polygon_vertices) + self.tolerance_radius
+
+        if point_u < min_u or point_u > max_u or point_v < min_v or point_v > max_v:
             return False
 
         if point_in_polygon_even_odd(point_u, point_v, polygon_vertices):
