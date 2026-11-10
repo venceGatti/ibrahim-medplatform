@@ -160,10 +160,11 @@ async def run_pipeline(
         with open(output_path, "w", encoding="utf-8", newline="\n") as file_trim:
             file_trim.write(current_content)
 
+    existing_module_codes = inspect_existing_modules(output_path)
     if not audit_only:
-        existing_module_codes = inspect_existing_modules(output_path)
         print(f"[SRS-PIPELINE] Moduli già archiviati nel documento: {len(existing_module_codes)}")
 
+    findings = []
     if is_remediation:
         print("[SRS-PIPELINE] Avvio Scansione MOCK nella codebase...")
         findings = audit_codebase_gaps(Path("."))
@@ -179,18 +180,16 @@ async def run_pipeline(
             f_inv.write("\n---\n\n")
 
         modules_to_generate = [m for m in ALL_SRS_MODULES if m.area_name == "Real_Data_Remediation" or m.area_name == "Curriculum_Docimology"]
-    else:
+    elif not audit_only:
         modules_to_generate = [
             mod for mod in ALL_SRS_MODULES if mod.module_code not in existing_module_codes
         ]
+    else:
+        modules_to_generate = []
 
-    findings = []
-    if is_remediation:
-        findings = audit_codebase_gaps(Path("."))
-
-    if getattr(locals(), 'modules_to_generate', None) is not None:
+    if not audit_only:
         if not modules_to_generate:
-            print("[SRS-PIPELINE] Tutti i 26 macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
+            print("[SRS-PIPELINE] Tutti i macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
         else:
             print(f"[SRS-PIPELINE] Moduli da generare/integrare: {len(modules_to_generate)}/{len(ALL_SRS_MODULES)}")
             orchestrator = AsyncGeminiOrchestrator(
