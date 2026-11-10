@@ -113,27 +113,27 @@ class RedFlagsInterceptor(IRedFlagsInterceptor):
         spo2_points = 0
         if not hypercapnic:
             # Scale 1
-            if spo2 <= 91:
+            if spo2 < 92:
                 spo2_points = 3
-            elif 92 <= spo2 <= 93:
+            elif 92 <= spo2 < 94:
                 spo2_points = 2
-            elif 94 <= spo2 <= 95:
+            elif 94 <= spo2 < 96:
                 spo2_points = 1
             else:
                 spo2_points = 0
         else:
             # Scale 2 (Hypercapnic respiratory failure risk - Royal College of Physicians)
-            if spo2 <= 83:
+            if spo2 < 84:
                 spo2_points = 3
-            elif 84 <= spo2 <= 85:
+            elif 84 <= spo2 < 86:
                 spo2_points = 2
-            elif 86 <= spo2 <= 87:
+            elif 86 <= spo2 < 88:
                 spo2_points = 1
-            elif 88 <= spo2 <= 92:
+            elif 88 <= spo2 < 93:
                 spo2_points = 0
-            elif 93 <= spo2 <= 94:
+            elif 93 <= spo2 < 95:
                 spo2_points = 1 if supp_o2 else 0
-            elif 95 <= spo2 <= 96:
+            elif 95 <= spo2 < 97:
                 spo2_points = 2 if supp_o2 else 0
             else:  # >= 97
                 if supp_o2:

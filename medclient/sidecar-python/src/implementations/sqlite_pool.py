@@ -122,3 +122,21 @@ class SqliteConnectionPool(ISqliteConnectionPool):
     get_connection = acquire
     close = close_all
 
+
+def sanitize_fts5_query(query: str) -> str:
+    """Sanitize user query for SQLite FTS5 queries against malformed syntax."""
+    if not query:
+        return ""
+    import re
+    # Remove control characters
+    cleaned = "".join(ch for ch in query if ord(ch) >= 32)
+    if cleaned.count('"') % 2 != 0:
+        cleaned = cleaned.replace('"', " ")
+    tokens = cleaned.split()
+    safe_tokens = []
+    for t in tokens:
+        raw_upper = re.sub(r"[^A-Za-z]", "", t).upper()
+        if raw_upper in ["NEAR", "NOT", "AND", "OR"]:
+            continue
+        safe_tokens.append(t)
+    return " ".join(safe_tokens)

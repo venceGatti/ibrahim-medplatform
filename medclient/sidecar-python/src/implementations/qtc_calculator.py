@@ -81,3 +81,23 @@ class QTcCalculator(IQTcCalculator):
             "torsades_de_pointes_risk": severity,
             "alerts": alerts,
         }
+
+    def calculate_qtc_intervals(
+        self,
+        raw_qt_ms: float,
+        heart_rate_bpm: float,
+    ) -> Dict[str, float]:
+        """Calculate QTc using Bazett, Fridericia, Framingham, and Hodges formulas (ROA-11)."""
+        if heart_rate_bpm <= 0.0 or raw_qt_ms <= 0.0:
+            raise ValueError("Heart rate and QT interval must be strictly positive")
+        rr_sec = 60.0 / heart_rate_bpm
+        bazett = raw_qt_ms / (rr_sec ** 0.5)
+        fridericia = raw_qt_ms / (rr_sec ** (1.0 / 3.0))
+        framingham = raw_qt_ms + 154.0 * (1.0 - rr_sec)
+        hodges = raw_qt_ms + 1.75 * (heart_rate_bpm - 60.0)
+        return {
+            "bazett_ms": round(bazett, 1),
+            "fridericia_ms": round(fridericia, 1),
+            "framingham_ms": round(framingham, 1),
+            "hodges_ms": round(hodges, 1),
+        }

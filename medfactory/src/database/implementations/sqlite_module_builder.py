@@ -18,6 +18,7 @@ class SQLiteModuleBuilder(SQLiteDomainInserterMixin, ISQLiteBuilder):
     def __init__(self, staging_database_path: Path):
         self.staging_database_path = Path(staging_database_path)
         self._is_closed = False
+        self.staging_database_path.parent.mkdir(parents=True, exist_ok=True)
         if self.staging_database_path.exists():
             self.staging_database_path.unlink()
 
