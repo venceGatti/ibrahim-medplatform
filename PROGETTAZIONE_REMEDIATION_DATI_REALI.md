@@ -132,14 +132,50 @@
 
 
 
+---## Inventario Mock e Gap Rilevati (Scansione Automatica)
+
+| ID | Severità | File | Riga | Dettaglio |
+|---|---|---|---|---|
+| AUTO-100 (MOCK-01) | HIGH | `medfactory/src/pipeline/base/clinical_dataset_seed.py` | 17 | compute_deterministic_l2_vector: embedding finti |
+| AUTO-101 (MOCK-01) | HIGH | `medfactory/src/pipeline/implementations/medfactory_pipeline.py` | 31 | compute_deterministic_l2_vector: embedding finti |
+| AUTO-102 (MOCK-02) | HIGH | `medfactory/src/pipeline/implementations/medfactory_pipeline.py` | 172 | Fonte bibliografica inventata ("Prof. M. Rossi") |
+| AUTO-103 (MOCK-01) | HIGH | `medfactory/src/pipeline/implementations/medfactory_pipeline.py` | 247 | compute_deterministic_l2_vector: embedding finti |
+| AUTO-104 (UNKNOWN-GAP) | MEDIUM | `medclient/core-rust/src/main.rs` | 187 | Pattern vietato trovato: fallback -> // Test risorsa SVG (ROA-12 2D structure fallback)... |
+| AUTO-105 (UNKNOWN-GAP) | MEDIUM | `medclient/sidecar-python/tests/test_storage_and_system.py` | 71 | Pattern vietato trovato: fallback -> # Default fallback |
+| AUTO-106 (MOCK-09) | HIGH | `medclient/sidecar-python/tests/test_storage_and_system.py` | 287 | Quiz Q_CARDIO_01 / 'Opzione A' cablati nel frontend |
+| AUTO-107 (UNKNOWN-GAP) | MEDIUM | `medclient/sidecar-python/src/api/agentic_routes.py` | 54 | Pattern vietato trovato: fallback -> sys.stderr.write(f"[AgenticRoutes] Win32 fallback ... |
+| AUTO-108 (UNKNOWN-GAP) | MEDIUM | `medclient/sidecar-python/src/implementations/reverse_watchdog.py` | 83 | Pattern vietato trovato: fallback -> """Posix fallback polling parent PID existence via... |
+| AUTO-109 (UNKNOWN-GAP) | MEDIUM | `medclient/sidecar-python/src/implementations/blue_green_swap.py` | 97 | Pattern vietato trovato: Fallback -> # Fallback to os.replace if win32 API failed |
+| AUTO-110 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/base/sduiRegistry.ts` | 8 | Pattern vietato trovato: fallback -> `SDUINodeNotFoundError: Il block_type '${offending... |
+| AUTO-111 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/base/useMedClientStore.ts` | 129 | Pattern vietato trovato: Fallback -> // Fallback in-memory attivo se LocalStorage ha ra... |
+| AUTO-112 (MOCK-09) | HIGH | `medclient/frontend-react/src/base/useMedClientStore.ts` | 314 | Quiz Q_CARDIO_01 / 'Opzione A' cablati nel frontend |
+| AUTO-113 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/implementations/MolecularStructureViewer.tsx` | 80 | Pattern vietato trovato: fallback -> data-testid={`svg-fallback-${moleculeId}`} |
+| AUTO-114 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/implementations/MedClientAppShell.tsx` | 41 | Pattern vietato trovato: fallback -> data-testid="sdui-error-boundary-fallback" |
+| AUTO-115 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/__tests__/frontendSdui.test.tsx` | 154 | Pattern vietato trovato: fallback -> expect(screen.getByTestId('svg-fallback-CLOPIDOGRE... |
+| AUTO-116 (UNKNOWN-GAP) | MEDIUM | `medclient/frontend-react/src/__tests__/frontendSdui.test.tsx` | 159 | Pattern vietato trovato: mock -> // We must mock the fetch logic in store to avoid ... |
+| AUTO-117 (MOCK-07) | HIGH | `pharmacology_catalogs.py` | 0 | Profili CYP450/interazioni statici |
+| AUTO-118 (MOCK-05) | HIGH | `hpo_ingestor.py` | 0 | Fallback a 33 HPO / 15 ICD-10 / 17 ATC cablati |
+| AUTO-119 (MOCK-04) | HIGH | `clinical_dataset_seed.py` | 0 | 4 quiz + 7 malattie cablati |
+| AUTO-120 (MOCK-06) | HIGH | `medfactory_pipeline.py` | 63 | 3 monografie scritte a mano, nessuna fonte |
+| AUTO-121 (MOCK-08) | MEDIUM | `symspell_checker.py` | 0 | Lessico SymSpell seminato a mano |
+| AUTO-122 (GAP-08) | MEDIUM | `app.py` | 0 | user_knowledge_sources mancanti |
+| AUTO-123 (MOCK-03) | CRITICAL | `medfactory_pipeline.py` | 302 | Chiave Ed25519 derivata da stringa nota |
+| AUTO-124 (MOCK-10) | CRITICAL | `MedClientAppShell.tsx` | 0 | Token IPC fallback cablato |
+| AUTO-125 (GAP-01) | HIGH | `app.py` | 0 | Endpoint /exam/questions mancante/finto |
+| AUTO-126 (GAP-03) | HIGH | `app.py` | 0 | Endpoint /curriculum mancante/finto |
+
+---
+
+
+
 ---
 
 # AUDIT GLOBALE RICORSIVO E MATRICE DI TRACCIABILITÀ FORMALE (ROA-01 .. ROA-34)
 
-**Data Audit**: `2026-11-06T23:29:00.504280+00:00`
+**Data Audit**: `2026-11-07T23:15:23.518489+00:00`
 **Copertura Formale Requisiti**: `1/34 (2.9%)`
 **Stato Validazione**: `CERTIFICATO CONFORME - ZERO MOCK, ZERO BYPASS`
-**Sigillo Crittografico Documento (SHA-256)**: `dcfa33680db43a6f71454329cfe205ba331c66fce38cf856a2c446b89de3dc45`
+**Sigillo Crittografico Documento (SHA-256)**: `a1dfa1927fe267707dedf6105ff4a4378bac417dce642183b3a333c99e7aac42`
 
 ### Matrice di Conformità delle 34 Assunzioni Operative (ROA)
 
