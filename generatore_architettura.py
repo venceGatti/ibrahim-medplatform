@@ -164,30 +164,27 @@ async def run_pipeline(
     if not audit_only:
         print(f"[SRS-PIPELINE] Moduli già archiviati nel documento: {len(existing_module_codes)}")
 
-    findings = []
-    if is_remediation:
-        print("[SRS-PIPELINE] Avvio Scansione MOCK nella codebase...")
-        findings = audit_codebase_gaps(Path("."))
-        print(f"[SRS-PIPELINE] Trovati {len(findings)} mock/gap cablati.")
+        findings = []
+        if is_remediation:
+            print("[SRS-PIPELINE] Avvio Scansione MOCK nella codebase...")
+            findings = audit_codebase_gaps(Path("."))
+            print(f"[SRS-PIPELINE] Trovati {len(findings)} mock/gap cablati.")
 
-        # Scrive l'inventario nel file
-        with open(output_path, "a", encoding="utf-8") as f_inv:
-            f_inv.write("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n\n")
-            f_inv.write("| ID | Severità | File | Riga | Dettaglio |\n")
-            f_inv.write("|---|---|---|---|---|\n")
-            for fd in findings:
-                f_inv.write(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |\n")
-            f_inv.write("\n---\n\n")
+            # Scrive l'inventario nel file
+            with open(output_path, "a", encoding="utf-8") as f_inv:
+                f_inv.write("## Inventario Mock e Gap Rilevati (Scansione Automatica)\n\n")
+                f_inv.write("| ID | Severità | File | Riga | Dettaglio |\n")
+                f_inv.write("|---|---|---|---|---|\n")
+                for fd in findings:
+                    f_inv.write(f"| {fd.id} ({fd.gap_ref}) | {fd.severity} | `{fd.file_path}` | {fd.line_number} | {fd.extract} |\n")
+                f_inv.write("\n---\n\n")
 
-        modules_to_generate = [m for m in ALL_SRS_MODULES if m.area_name == "Real_Data_Remediation" or m.area_name == "Curriculum_Docimology"]
-    elif not audit_only:
-        modules_to_generate = [
-            mod for mod in ALL_SRS_MODULES if mod.module_code not in existing_module_codes
-        ]
-    else:
-        modules_to_generate = []
+            modules_to_generate = [m for m in ALL_SRS_MODULES if m.area_name == "Real_Data_Remediation" or m.area_name == "Curriculum_Docimology"]
+        else:
+            modules_to_generate = [
+                mod for mod in ALL_SRS_MODULES if mod.module_code not in existing_module_codes
+            ]
 
-    if not audit_only:
         if not modules_to_generate:
             print("[SRS-PIPELINE] Tutti i macro-moduli sono già presenti nel documento. Passaggio diretto all'Audit.")
         else:
@@ -206,6 +203,8 @@ async def run_pipeline(
                 for idx, mod in enumerate(modules_to_generate, start=1)
             ]
             await asyncio.gather(*tasks)
+    else:
+        print("[SRS-PIPELINE] Modalità audit-only attiva: generazione moduli saltata.")
 
     # Fase Finale: Audit Globale Ricorsivo e Matrice di Tracciabilità
     print("\n[SRS-PIPELINE] Avvio dell'Audit Globale Ricorsivo sulle 34 Assunzioni Operative (ROA)...")
